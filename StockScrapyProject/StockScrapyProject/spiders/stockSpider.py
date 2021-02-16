@@ -45,12 +45,15 @@ class StockSpider(scrapy.Spider):
     def output_EmptyList_csv(self):
         now = datetime.now()
         dt_string = now.strftime("%d-%m-%Y %H-%M-%S")
-        self.noExist = list(filter(None, self.noExist))
-        dict ={'代號' : self.noExist}
-        df = pd.DataFrame(dict)
-        filename=f'..\{dt_string}-未存在股號.csv'
-        df.to_csv(filename, index=False)
-        print(f'已匯出未存在的股號至{filename}')
+        if(not len(self.noExist)):
+            self.noExist = list(filter(None, self.noExist))
+            dict ={'代號' : self.noExist}
+            df = pd.DataFrame(dict)
+            filename=f'..\{dt_string}-未存在股號.csv'
+            df.to_csv(filename, index=False)
+            print(f'已匯出未存在的股號至{filename}')
+        else:
+            print('無缺漏股號。')
 
     def spider_closed(self, spider): #爬蟲關閉時的動作
         self.output_EmptyList_csv()

@@ -66,7 +66,7 @@ RETRY_TIMES = 15
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'StockScrapyProject.pipelines.MongoPipeline': 300,
+    'StockScrapyProject.pipelines.MongoPipeline': 500,
 }
 #
 
