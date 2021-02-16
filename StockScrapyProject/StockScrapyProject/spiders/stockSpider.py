@@ -3,7 +3,7 @@ import csv
 import urllib.parse as urlParse
 from urllib.parse import parse_qs
 from decimal import *
-import pandas as pd
+import pysimplegui
 
 from ..items import StockscrapyprojectItem
 
@@ -18,6 +18,16 @@ class StockSpider(scrapy.Spider):
     current=1
     allowed_domains =['mops.twse.com.tw'] # 允許網域
 
+    def load_csv(self):
+         with open(self.import_csv,newline='',encoding="utf-8") as csvfile_Lc: #讀入CSV檔案
+            rows = csv.DictReader(csvfile_Lc)
+            for row in rows:
+                self.total+=1
+                if(row['代號'].isnumeric()): #檢查股號是否為純號碼
+                    self.ready_crawl+=1
+                    Co_id=row['代號']
+                    self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={Co_id}&SYEAR={Year}&SSEASON={Season}&REPORT_ID=C') #帶入網址序列
+
     def print_info(self): #列出爬蟲資訊
         print(f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl},目前筆數:{self.current},確認存在股數:{self.exist},確認未存在股號數:{len(self.noExist)}")
         print("\n未存在股號列表：")
@@ -27,14 +37,7 @@ class StockSpider(scrapy.Spider):
     def __init__(self,Year='',Season='', **kwargs):
         self.Year=Year #帶入參數年份 -a Year
         self.Season=Season #帶入參數季度 -a Season
-        with open(self.import_csv,newline='',encoding="utf-8") as csvfile_Lc: #讀入CSV檔案
-            rows = csv.DictReader(csvfile_Lc)
-            for row in rows:
-                self.total+=1
-                if(row['代號'].isnumeric()): #檢查股號是否為純號碼
-                    self.ready_crawl+=1
-                    Co_id=row['代號']
-                    self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={Co_id}&SYEAR={Year}&SSEASON={Season}&REPORT_ID=C') #帶入網址序列
+        self.load_csv()
         super().__init__(**kwargs)  # python3
 
     def is_Number(self,s): #檢查字串是否為數目

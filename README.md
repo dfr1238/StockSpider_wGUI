@@ -11,3 +11,5 @@
 - scrapy
 - protego
 - pymongo
+- urllib
+- csv
