@@ -5,7 +5,6 @@ from urllib.parse import parse_qs
 from decimal import *
 import pandas as pd
 
-from scrapy import item
 from ..items import StockscrapyprojectItem
 
 class StockSpider(scrapy.Spider):
@@ -19,7 +18,7 @@ class StockSpider(scrapy.Spider):
     current=1
     allowed_domains =['mops.twse.com.tw'] # 允許網域
 
-    def print_info(self):
+    def print_info(self): #列出爬蟲資訊
         print(f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl},目前筆數:{self.current},確認存在股數:{self.exist},確認未存在股號數:{len(self.noExist)}")
         print("\n未存在股號列表：")
         for printdata in range(len(self.noExist)):
@@ -38,7 +37,7 @@ class StockSpider(scrapy.Spider):
                     self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={Co_id}&SYEAR={Year}&SSEASON={Season}&REPORT_ID=C') #帶入網址序列
         super().__init__(**kwargs)  # python3
 
-    def is_Number(self,s):
+    def is_Number(self,s): #檢查字串是否為數目
         try:
             float(s)
             return True
@@ -49,7 +48,7 @@ class StockSpider(scrapy.Spider):
         items = StockscrapyprojectItem()# 匯入資料集。
         parsed = urlParse.urlparse(response.request.url)
         company_id=parse_qs(parsed.query)['CO_ID']
-        if(response.xpath("/html/body/h4//text()").get() is None):
+        if(response.xpath("/html/body/h4//text()").get() is None): #檢查是否存在檔案不存在之字串
             self.exist+=1
             items['ID'] = self.exist
         else:
@@ -58,7 +57,7 @@ class StockSpider(scrapy.Spider):
         items['CO_ID'] = company_id
         items['Syear'] = self.Year
         items['SSeason'] = self.Season
-        ##表一：資產負債表
+        #主要爬蟲區
         for datas in response.xpath('body/div[2]/div[3]'):
             tables1_ID=['1100','1110','1120','1136','1139','25XX','3110']
             tables1_ItemsName=['A1','A2','A3','A4','A5','A6','A7']
