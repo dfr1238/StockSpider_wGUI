@@ -10,6 +10,7 @@ class StockscrapyprojectItem(scrapy.Item):
     ##基本資料
     ID = scrapy.Field() #ID
     CO_ID = scrapy.Field() #股號
+    CO_NAME = scrapy.Field() #公司名稱
     Syear = scrapy.Field() #年度
     SSeason = scrapy.Field() #季度
     ##A

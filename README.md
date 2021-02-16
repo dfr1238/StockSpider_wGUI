@@ -12,4 +12,6 @@
 - protego
 - pymongo
 - urllib
+- pandas
 - csv
+- datetime
