@@ -4,8 +4,7 @@ from scrapy import signals
 import urllib.parse as urlParse
 from urllib.parse import parse_qs
 import pandas as pd
-from scrapy import item 
-from ..items import StockscrapyprojectItem
+from ..items import StockSpider_items
 from pydispatch import dispatcher
 from datetime import datetime
 
@@ -49,7 +48,7 @@ class StockSpider(scrapy.Spider):
     
     def output_EmptyList_csv(self): #列出未存在股號
         now = datetime.now()
-        dt_string = now.strftime("%d-%m-%Y %H-%M-%S")
+        dt_string = now.strftime("%Y-%m-%d %H-%M-%S")
         if(not len(self.noExist)):
             self.noExist = list(filter(None, self.noExist))
             dict ={'代號' : self.noExist}
@@ -97,7 +96,7 @@ class StockSpider(scrapy.Spider):
                     items[tables_ItemsName[tableID]] = None
 
     def parse(self, response): #擷取開始
-        items = StockscrapyprojectItem()# 匯入資料集。
+        items = StockSpider_items()# 匯入資料集。
         parsed = urlParse.urlparse(response.request.url)
         company_Id=parse_qs(parsed.query)['CO_ID'] #獲取網址股號
         report_ID=parse_qs(parsed.query)['REPORT_ID'] #獲取回報ID
