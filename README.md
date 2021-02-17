@@ -15,3 +15,5 @@
 - pandas
 - csv
 - datetime
+- configparser
+- PySimpleGUI
