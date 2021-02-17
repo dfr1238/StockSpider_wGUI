@@ -27,7 +27,7 @@ class StockSpider(scrapy.Spider):
             rows = csv.DictReader(csvfile_Lc)
             for row in rows:
                 self.total+=1
-                if(row['代號'].isnumeric() & (len(row['代號']) !=6)): #檢查股號是否為純號碼以及是否不是6位數
+                if( (len(row['代號']) ==4)): #檢查股號是否為純號碼以及是否為4位數
                     self.ready_crawl+=1
                     Co_id=row['代號']
                     self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={Co_id}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=C') #帶入網址序列
@@ -80,7 +80,6 @@ class StockSpider(scrapy.Spider):
         report_ID=parse_qs(parsed.query)['REPORT_ID'] #獲取回報ID
         if(response.xpath("/html/body/h4//text()").get() is None): #檢查是否存在檔案不存在之字串
             self.exist+=1
-            items['ID'] = self.exist
             if(str(report_ID[0])=='A'): #如果是回報A則減少待導入尋找筆數
                 self.wait_url_A-=1
         else:
