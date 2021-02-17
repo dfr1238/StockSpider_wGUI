@@ -16,8 +16,8 @@ sg.set_options(auto_size_buttons=True)
 #全域變數
 this_Year = datetime.today().year #獲取今年年份
 year_List =[] #存放年份
-local_csv_list =[]
-local_csv_list_header = []
+local_Coid_CSV_List =[]
+local_Coid_CSV_List_Header = []
 season_List =['1','2','3','4'] #存放季度
 
 #常數
@@ -35,7 +35,7 @@ csvpath = os.path.join(config_path+local_csv)#本地股號表路徑
 conf = configparser.ConfigParser() #創建設定檔對象
 
 #CSV相關
-dict ={'代號' : local_csv_list}
+dict ={'代號' : local_Coid_CSV_List}
 csvdf = pd.DataFrame(dict)
 
 
@@ -104,19 +104,19 @@ def set_Main_Window(): #主視窗
 
 def set_Local_CSV_Window(): #編輯本地股號表
     csvdf = pd.read_csv(csvpath, sep=',', engine='python', header=None)
-    local_csv_list = csvdf.values.tolist()
-    local_csv_list_header = csvdf.iloc[0].tolist()
-    local_csv_list = csvdf[1:].values.tolist()
-    local_csv_Layout =[
-        [sg.Table(values=local_csv_list,
-        headings=local_csv_list_header,
+    local_Coid_CSV_List = csvdf.values.tolist()
+    local_Coid_CSV_List_Header = csvdf.iloc[0].tolist()
+    local_Coid_CSV_List = csvdf[1:].values.tolist()
+    local_Coid_CSV_Layout =[
+        [sg.Table(values=local_Coid_CSV_List,
+        headings=local_Coid_CSV_List_Header,
         auto_size_columns=False,
         display_row_numbers=False,
-        num_rows=min(25,len(local_csv_list)))],
+        num_rows=min(25,len(local_Coid_CSV_List)))],
         [sg.Button('關閉且不保存變更'),sg.Button('關閉且保存變更'),sg.Button('保存變更'),sg.Button('重新整理'),
         sg.Button('匯入其他股號表'),sg.Button('清除股號表'),sg.Text(f'本地股號表CSV位於{csvpath}')]
             ]
-    return sg.Window("編輯本地股號表",local_csv_Layout,grab_anywhere=False, finalize=True)
+    return sg.Window("編輯本地股號表",local_Coid_CSV_Layout,grab_anywhere=False, finalize=True)
 
 def set_Setting_Window(): #主視窗 -> 設定
     setting_Layout = [
