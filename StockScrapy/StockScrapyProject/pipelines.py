@@ -5,10 +5,7 @@
 
 
 # useful for handling different item types with a single interface
-from typing import Collection
 from itemadapter import ItemAdapter
-from scrapy.exceptions import DropItem
-import logging
 import pymongo
 
 class MongoPipeline:
