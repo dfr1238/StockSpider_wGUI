@@ -1,13 +1,10 @@
-from os import popen, write
 import os.path as path
 import os
-from tkinter.constants import CENTER
 from PySimpleGUI.PySimpleGUI import Print
 import scrapy
 import PySimpleGUI as sg
 import configparser
 import pandas as pd
-import sys
 import csv
 from datetime import datetime
 from scrapy.crawler import CrawlerProcess
