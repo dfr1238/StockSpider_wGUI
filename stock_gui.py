@@ -16,27 +16,27 @@ sg.set_options(auto_size_buttons=True)
 #全域變數
 this_Year = datetime.today().year #獲取今年年份
 year_List =[] #存放年份
-local_Coid_CSV_List =[]
-local_Coid_CSV_List_Header = []
+local_Coid_CSV_List =[] #本地股號表存放
+local_Coid_CSV_List_Header = [] #本地股號表標頭
 season_List =['1','2','3','4'] #存放季度
 
 #常數
 config_path=os.getenv('APPDATA')+'\DSApps\StockSpider\\' #設定檔路徑
-setting_ini='setting.ini'
-local_csv='local_coid.csv'
-default_MDBNAME='theStockDB'
-default_MDCDNAME='theStockData'
-default_MDUrl='mongodb://localhost:27017'
+setting_ini='setting.ini'   #設定檔名稱
+local_csv='local_coid.csv'  #CSV檔名稱
+default_MDBNAME='theStockDB'    #預設MongoDB名稱
+default_MDCDNAME='theStockData' #預設MongoDB的CD名稱
+default_MDUrl='mongodb://localhost:27017'   #預設MongoDB連接Url
 
 #setting.ini相關設定
-curpath = os.path.dirname(os.path.realpath(__file__))#目前路徑
-cfgpath = os.path.join(config_path,setting_ini)#設定檔路徑
-csvpath = os.path.join(config_path+local_csv)#本地股號表路徑
-conf = configparser.ConfigParser() #創建設定檔對象
+curpath = os.path.dirname(os.path.realpath(__file__))   #目前路徑
+cfgpath = os.path.join(config_path,setting_ini) #設定檔路徑
+csvpath = os.path.join(config_path+local_csv)   #本地股號表路徑
+conf = configparser.ConfigParser()  #創建設定檔對象
 
 #CSV相關
-dict ={'代號' : local_Coid_CSV_List}
-csvdf = pd.DataFrame(dict)
+dict ={'代號' : local_Coid_CSV_List} #建立空的本地股號列表
+csvdf = pd.DataFrame(dict) #導入pd使用
 
 
 for i in range(2000,this_Year+1): #新增從2000至今年的年份至列表中
@@ -98,7 +98,7 @@ def set_Main_Window(): #主視窗
                 [sg.Text('運行計算式')],
                 [sg.Button('公式一'),sg.Button('公式二'),sg.Button('公式三'),sg.Button('公式四')],
                 [sg.Text('其他選項')],
-                [sg.Button('編輯本地股號表'),sg.Button('設定'),sg.Button('離開'),sg.Button('說明')] 
+                [sg.Button('編輯本地股號表'),sg.Button('設定'),sg.Button('離開'),sg.Button('關於'),sg.Button('說明')] 
                     ]
     return sg.Window("股票資料抓取與運算", main_Layout, margins=(40,20), finalize=True)
 
@@ -113,18 +113,19 @@ def set_Local_CSV_Window(): #編輯本地股號表
         auto_size_columns=False,
         display_row_numbers=False,
         num_rows=min(25,len(local_Coid_CSV_List)))],
-        [sg.Button('關閉且不保存變更'),sg.Button('關閉且保存變更'),sg.Button('保存變更'),sg.Button('重新整理'),
-        sg.Button('匯入其他股號表'),sg.Button('清除股號表'),sg.Text(f'本地股號表CSV位於{csvpath}')]
+        [sg.Button('關閉且「不保存」變更'),sg.Button('關閉且「保存」變更'),sg.Button('保存當前變更'),sg.Button('重新整理'),
+        sg.Button('匯入外部股號表'),sg.Button('重置本地股號表')],
+        [sg.Text(f'本地股號表CSV位於{csvpath}')]
             ]
     return sg.Window("編輯本地股號表",local_Coid_CSV_Layout,grab_anywhere=False, finalize=True)
 
 def set_Setting_Window(): #主視窗 -> 設定
     setting_Layout = [
     [sg.Text(f'設定檔的路徑位於：{config_path+setting_ini}')],
-    [sg.Text('MongoDB －大多數的時候你不用更動這個選項。')],
+    [sg.Text('MongoDB －你絕大多數不用更動這個選項，此選項區是關於資料庫連接有關與存放爬取資料的相關設定。')],
     [sg.Text('MongoDB 連結：\t'),sg.Input(default_text=(conf['MongoDB']['MONGO_URI']),size=(30,1),k='mDBUrI')],
-    [sg.Text('MongoDB 資料庫名稱：\t'),sg.Input(default_text=(conf['MongoDB']['DBNAME']),size=(20,1),k='mDBName')],
-    [sg.Text('MongoDB 集合名稱：\t'),sg.Input(default_text=(conf['MongoDB']['CDATANAME']),size=(20,1),k='mCDName')],
+    [sg.Text('MongoDB 資料庫名稱：\t'),sg.Input(default_text=(conf['MongoDB']['DBNAME']),size=(30,1),k='mDBName')],
+    [sg.Text('MongoDB 集合名稱：\t'),sg.Input(default_text=(conf['MongoDB']['CDATANAME']),size=(30,1),k='mCDName')],
     [sg.Button('保存'),sg.Button('取消'),sg.Button('重置')]
                     ]
     
@@ -170,8 +171,8 @@ while True: #監控視窗回傳
             sg.popup('打開編輯本地股號表')
             local_Csv_Window=set_Local_CSV_Window()
 
-        if event == "說明":
-            sg.popup('股票資訊爬蟲 1.0 \n作者：Douggy Sans',title='說明')
+        if event == "關於":
+            sg.popup('股票資訊爬蟲\n版本： 1.0\n作者：Douggy Sans\n2021年編寫',title='關於')
     
     if window == setting_Window: #主視窗 -> 設定視窗之互動
         if event in (sg.WIN_CLOSED,'取消'):
@@ -199,7 +200,7 @@ while True: #監控視窗回傳
             aM_Window=None
     
     if window == local_Csv_Window: # 主視窗 -> 編輯本地股號表
-        if event in (sg.WIN_CLOSED,'關閉且不保存變更'):
+        if event in (sg.WIN_CLOSED,'關閉且「不保存」變更'):
             window.close()
             local_Csv_Window=None
         if event == "重新整理":
