@@ -6,7 +6,7 @@
 import scrapy
 
 
-class StockscrapyprojectItem(scrapy.Item):
+class StockSpider_items(scrapy.Item):
     ##基本資料
     CO_ID = scrapy.Field() #股號
     CO_NAME = scrapy.Field() #公司名稱
@@ -25,4 +25,13 @@ class StockscrapyprojectItem(scrapy.Item):
     B2 = scrapy.Field() #B2:營業利益（損失）
     B3 = scrapy.Field() #B3:營業外收入及支出合計
     B4 = scrapy.Field() #B4:稀釋每股盈餘合計
+    pass
+
+class StockPrice_items(scrapy.Item):
+    #基本資料
+    CO_ID = scrapy.Field()  #股號
+    CO_NAME = scrapy.Field()    #公司名稱
+    SYear = scrapy.Field()  #年度
+    SDate = scrapy.Field()  #詳細日期
+    Price = scrapy.Field()  #收盤價
     pass
