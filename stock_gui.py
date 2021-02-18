@@ -1,6 +1,5 @@
 import os.path as path
 import os
-from PySimpleGUI.PySimpleGUI import Print
 import scrapy
 import PySimpleGUI as sg
 import configparser
@@ -56,10 +55,11 @@ def reset_setting():#重置設定
 def reset_csv():#重建csv檔
     csvdf.to_csv(csvpath, index=False)
     sg.popup('已建立本地股號表。')
+    sg.Print('重建本地股號表')
 
 def check_setting():#檢查設定
     if(path.exists(config_path+setting_ini)):
-        Print('已檢查到設定檔。')
+        sg.Print('已檢查到設定檔。')
         conf.read(cfgpath,encoding='utf-8')
     else:
         sg.popup('未檢查到設定檔，創建中...',title='系統')
@@ -68,7 +68,7 @@ def check_setting():#檢查設定
 
 def check_local_csv():#檢查本地CSV
     if(path.exists(config_path+local_csv)):
-        Print('已檢查到本地股號表。')
+        sg.Print('已檢查到本地股號表。')
     else:
         sg.popup('未建立本地股號表，創建中...',title='系統')
         reset_csv()
