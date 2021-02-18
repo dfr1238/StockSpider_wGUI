@@ -5,12 +5,14 @@ import urllib.parse as urlParse
 from urllib.parse import parse_qs
 import pandas as pd
 import PySimpleGUI as sg
+from scrapy import item
 from ..items import StockSpider_items
 from pydispatch import dispatcher
 from datetime import datetime
 
 class StockSpider(scrapy.Spider):
-    Type='CO_DATA'
+    Type='財務報告'
+    SubType=''
     Year=''
     Season=''
     Mode=''
@@ -51,11 +53,11 @@ class StockSpider(scrapy.Spider):
     def output_EmptyList_csv(self): #列出未存在股號
         now = datetime.now()
         dt_string = now.strftime("%Y-%m-%d %H-%M-%S")
-        if(not len(self.noExist)):
+        if(len(self.noExist)):
             self.noExist = list(filter(None, self.noExist))
             dict ={'代號' : self.noExist}
             df = pd.DataFrame(dict)
-            filename=f'..\{dt_string}-未存在股號.csv'
+            filename=f'..\{dt_string}-財務報告-未存在股號.csv'
             df.to_csv(filename, index=False)
             print(f'已匯出未存在的股號至{filename}')
         else:
@@ -118,7 +120,8 @@ class StockSpider(scrapy.Spider):
                 self.wait_url_A+=1
                 self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={company_Id[0]}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=A')
                 pass
-
+        items['DATA_TYPE']=self.Type
+        items['SUB_DATA_TYPE']= '個別財務報告' if (report_ID == 'A')  else '合併財務報告' 
         items['CO_ID'] = str(company_Id[0])
         co_name = str(response.xpath('/html/body/div[2]/div[1]/div[2]/span[1]//text()').get())
         items['CO_NAME'] = co_name
