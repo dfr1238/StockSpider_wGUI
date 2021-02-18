@@ -4,11 +4,13 @@ from scrapy import signals
 import urllib.parse as urlParse
 from urllib.parse import parse_qs
 import pandas as pd
+import PySimpleGUI as sg
 from ..items import StockSpider_items
 from pydispatch import dispatcher
 from datetime import datetime
 
 class StockSpider(scrapy.Spider):
+    Type='CO_DATA'
     Year=''
     Season=''
     Mode=''
@@ -28,7 +30,7 @@ class StockSpider(scrapy.Spider):
             rows = csv.DictReader(csvfile_Lc)
             for row in rows:
                 self.total+=1
-                if( (len(row['代號']) ==4)): #檢查股號是否為純號碼以及是否為4位數
+                if( (len(row['代號']) ==4) and row['代號'].isnumeric()): #檢查股號是否為純號碼以及是否為4位數
                     self.ready_crawl+=1
                     Co_id=row['代號']
                     self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={Co_id}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=C') #帶入網址序列
