@@ -8,6 +8,8 @@ import scrapy
 
 class StockSpider_items(scrapy.Item):
     ##基本資料
+    DATA_TYPE = scrapy.Field() #資料類型－財務報告
+    SUB_DATA_TYPE= scrapy.Field() #子資料類別－報告類型
     CO_ID = scrapy.Field() #股號
     CO_NAME = scrapy.Field() #公司名稱
     Syear = scrapy.Field() #年度
@@ -29,6 +31,8 @@ class StockSpider_items(scrapy.Item):
 
 class StockPrice_items(scrapy.Item):
     #基本資料
+    DATA_TYPE = scrapy.Field() #資料類型－股價
+    SUB_DATA_TYPE= scrapy.Field() #子資料類別－交易所
     CO_ID = scrapy.Field()  #股號
     CO_NAME = scrapy.Field()    #公司名稱
     SYear = scrapy.Field()  #年度
