@@ -1,5 +1,6 @@
 import os.path as path
 import os
+from PySimpleGUI.PySimpleGUI import popup, theme_slider_border_width
 import scrapy
 import PySimpleGUI as sg
 import configparser
@@ -15,9 +16,18 @@ sg.set_options(auto_size_buttons=True)
 #全域變數
 this_Year = datetime.today().year #獲取今年年份
 year_List =[] #存放年份
+season_List =['1','2','3','4'] #存放季度
+#資料存放
 local_Coid_CSV_List =[] #本地股號表存放
 local_Coid_CSV_List_Header = [] #本地股號表標頭
-season_List =['1','2','3','4'] #存放季度
+user_Coid_CSV_List =[] #暫存股號表存放
+user_Coid_CSV_List_Header =[] #暫存股號表標頭
+backup_Coid_CSV_List =[] #備份
+backup_Coid_CSV_List_Header=[] #備份
+
+#State
+local_Coid_CSV_is_changed = False
+local_Coid_CSV_step=0
 
 #常數
 config_path=os.getenv('APPDATA')+'\DSApps\StockSpider\\' #設定檔路徑
@@ -68,7 +78,14 @@ def check_setting():#檢查設定
 
 def check_local_csv():#檢查本地CSV
     if(path.exists(config_path+local_csv)):
+        global local_Coid_CSV_List,local_Coid_CSV_List_Header,user_Coid_CSV_List,user_Coid_CSV_List_Header
         sg.Print('已檢查到本地股號表。')
+        csvdf = pd.read_csv(csvpath, sep=',', engine='python', header=None)
+        local_Coid_CSV_List = csvdf.values.tolist()
+        local_Coid_CSV_List_Header = csvdf.iloc[0].tolist()
+        local_Coid_CSV_List = csvdf[1:].values.tolist()
+        user_Coid_CSV_List=local_Coid_CSV_List
+        user_Coid_CSV_List_Header=local_Coid_CSV_List_Header
     else:
         sg.popup('未建立本地股號表，創建中...',title='系統')
         reset_csv()
@@ -76,9 +93,61 @@ def check_local_csv():#檢查本地CSV
 check_setting()
 check_local_csv()
 
+#方法
+
+def local_CSV_usercsvfile_import(isReplace,csv_path): #匯入外部股號表
+    global local_Coid_CSV_step,user_Coid_CSV_List,user_Coid_CSV_List_Header,local_Csv_Window
+    global local_Coid_CSV_is_changed
+    csvdf = pd.DataFrame(dict) #導入pd使用
+    csvdf = pd.read_csv(csv_path, sep=',', engine='python', header=None)
+    if(isReplace):
+        backup_Coid_CSV_List.append(user_Coid_CSV_List)
+        backup_Coid_CSV_List_Header.append(user_Coid_CSV_List_Header)
+        user_Coid_CSV_List = csvdf.values.tolist()
+        user_Coid_CSV_List_Header = csvdf.iloc[0].tolist()
+        user_Coid_CSV_List = csvdf[1:].values.tolist()
+    local_Coid_CSV_is_changed=True
+    local_Coid_CSV_step+=1
+    local_Csv_Window.close()
+    local_Csv_Window=None
+    local_Csv_Window=set_Local_CSV_Window()
+
+def local_CSV_Import_usercsvfile(): #編輯本地股號表 -> 匯入外部股號表
+    user_CSV_File_Path = sg.popup_get_file('讀入外部股號表',no_window=True,file_types=(("外部CSV股號表","*.csv"),))
+    if user_CSV_File_Path is not None: #檢測到檔案
+        local_Csv_imode_Window=set_local_CSV_Import_usercsvfile_mode()
+        while True: #監控視窗回傳
+            event, values = local_Csv_imode_Window.read()
+            if event =="確定":
+                if(values['ucMode_Replace'] == True):
+                    Button =sg.popup_ok_cancel('取代目前已有的股號表，確定嗎？')
+                    if(Button =="OK"):
+                        sg.popup("使用取代模式")
+                        local_CSV_usercsvfile_import(True,user_CSV_File_Path)
+                        break
+                else:
+                    Button = sg.popup_ok_cancel('添加至目前已有的股號表，確定嗎？')
+                    if(Button =="OK"):
+                        sg.popup("使用增加模式")
+                        local_CSV_usercsvfile_import(False,user_CSV_File_Path)
+                        break
+            if event =="取消":
+                break
+        local_Csv_imode_Window.close()
+        local_Csv_imode_Window=None
+
 #視窗設計
 
-def set_AutoMode_Window(): #自動爬取來源
+def set_local_CSV_Import_usercsvfile_mode(): #匯入外部股號表 -> 匯入模式
+    usercsvfile_Mode_Layout =[
+        [sg.Text('選擇匯入模式')],
+        [sg.Radio('取代－取代整個股號表',key='ucMode_Replace',group_id='usercsvMode')],
+        [sg.Radio('增加－將CSV內的股號表新增至目前已有',key='ucMode_Add',group_id='usercsvMode')],
+        [sg.Button('確定'),sg.Button('取消')]
+    ]
+    return sg.Window("匯入模式",usercsvfile_Mode_Layout,margins=(40,20),finalize=True,modal=True,disable_close=True,disable_minimize=True)
+
+def set_AutoMode_Window(): #主視窗 -> [自動模式] -> 自動爬取來源
     autoMode_Layout =[
                 [sg.Text('選擇股號來源')],
                 [sg.Radio('從本地股號表讀入',group_id='AM_LoadMode',key='loadFromLocal'),sg.Radio('從CSV檔匯入',group_id='AM_LoadMode',key='loadFromCSV')],
@@ -102,22 +171,19 @@ def set_Main_Window(): #主視窗
                     ]
     return sg.Window("股票資料抓取與運算", main_Layout, margins=(40,20), finalize=True)
 
-def set_Local_CSV_Window(): #編輯本地股號表
-    csvdf = pd.read_csv(csvpath, sep=',', engine='python', header=None)
-    local_Coid_CSV_List = csvdf.values.tolist()
-    local_Coid_CSV_List_Header = csvdf.iloc[0].tolist()
-    local_Coid_CSV_List = csvdf[1:].values.tolist()
+def set_Local_CSV_Window(): #主視窗 -> 編輯本地股號表
     local_Coid_CSV_Layout =[
-        [sg.Table(values=local_Coid_CSV_List,
-        headings=local_Coid_CSV_List_Header,
+        [sg.Text('已變更資料，尚未保存' if local_Coid_CSV_is_changed else '原始資料'),sg.Button('復原',disabled=not(local_Coid_CSV_is_changed))],
+        [sg.Table(values=user_Coid_CSV_List,
+        headings=user_Coid_CSV_List_Header,
         auto_size_columns=False,
         display_row_numbers=False,
-        num_rows=min(25,len(local_Coid_CSV_List)))],
+        num_rows=min(25,len(user_Coid_CSV_List)),select_mode="browse",key='local_Coid_CSV_Table')],
         [sg.Button('關閉且「不保存」變更'),sg.Button('關閉且「保存」變更'),sg.Button('保存當前變更'),sg.Button('重新整理'),
         sg.Button('匯入外部股號表'),sg.Button('重置本地股號表')],
         [sg.Text(f'本地股號表CSV位於{csvpath}')]
             ]
-    return sg.Window("編輯本地股號表",local_Coid_CSV_Layout,grab_anywhere=False, finalize=True)
+    return sg.Window("編輯本地股號表",local_Coid_CSV_Layout,grab_anywhere=False, finalize=True,modal=True)
 
 def set_Setting_Window(): #主視窗 -> 設定
     setting_Layout = [
@@ -131,7 +197,7 @@ def set_Setting_Window(): #主視窗 -> 設定
     
     return sg.Window("程式設定",setting_Layout, margins=(10,5),finalize=True,modal=True,disable_close=True,disable_minimize=True)
 
-main_Window,setting_Window,aM_Window,local_Csv_Window = set_Main_Window(),None,None,None
+main_Window,setting_Window,aM_Window,local_Csv_Window,local_Csv_imode_Window = set_Main_Window(),None,None,None,None
 print('主視窗載入完成。')
 
 while True: #監控視窗回傳
@@ -207,5 +273,7 @@ while True: #監控視窗回傳
             window.close()
             local_Csv_Window=None
             local_Csv_Window=set_Local_CSV_Window()
+        if event == "匯入外部股號表":
+            local_CSV_Import_usercsvfile()
     
 window.close()
