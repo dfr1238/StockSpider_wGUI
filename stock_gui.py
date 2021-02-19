@@ -4,6 +4,7 @@ from tkinter import Widget
 from typing import Dict
 import scrapy
 import PySimpleGUI as sg
+import numpy as np
 import configparser
 import pandas as pd
 import csv
@@ -44,8 +45,12 @@ conf = configparser.ConfigParser()  #創建設定檔對象
 #CSV相關
 coid_dict ={'代號':[],'名稱':[]} #建立空的本地股號列表
 coid_header=['代號','名稱']
-local_csvdf = pd.DataFrame(coid_dict) #導入本地股號表pd使用
-user_df = pd.DataFrame(coid_dict) #建立暫存本地股號表pd使用
+local_csvdf = pd.DataFrame(coid_dict).astype(str) #導入本地股號表pd使用
+user_df = pd.DataFrame(coid_dict).astype(str) #建立暫存本地股號表pd使用
+user_df['名稱'] = user_df['名稱'].astype(str)
+user_df['代號'] = user_df['代號'].astype(str)
+local_csvdf['名稱'] = local_csvdf['名稱'].astype(str)
+local_csvdf['代號'] = local_csvdf['代號'].astype(str)
 
 
 for i in range(2000,this_Year+1): #新增從2000至今年的年份至列表中
@@ -99,23 +104,42 @@ check_local_csv()
 #方法
 
 def local_CSV_Row_Edit(index): #編輯本地股號表 ->編輯單筆資料
-    global local_Csv_Window,local_Coid_CSV_is_changed
-    coid=user_Coid_CSV_List[index][0]
+    global local_Csv_Window,local_Coid_CSV_is_changed,user_Coid_CSV_List
+    old_Coid=str(user_Coid_CSV_List[index][0])
     try:
-        coname=user_Coid_CSV_List[index][1]
+        old_Coname=str(user_Coid_CSV_List[index][1])
     except IndexError:
-        coname=''
-    csv_Row_Edit_Window=set_local_CSV_Edit_Row(coid,coname)
+        old_Coname=''
+    csv_Row_Edit_Window=set_local_CSV_Edit_Row(old_Coid,old_Coname)
     while True : #監聽回傳
         event, values = csv_Row_Edit_Window.read()
         if(event == '保存'):
-            user_Coid_CSV_List[index][0]=str(values['COID'])
-            user_Coid_CSV_List[index][1]=str(values['CONAME'])
+            print(old_Coid)
+            new_Coid=str(values['COID'])
+            new_Coname=str(values['CONAME'])
+            print(new_Coid)
+            user_df['代號'] = user_df['代號'].astype(str)
+            print(user_df['代號'])
+            user_df['代號'] = user_df['代號'].replace([old_Coid],[new_Coid])
+            if '名稱' in user_df.columns:
+                user_df['名稱'] = user_df['名稱'].replace([old_Coname],[new_Coname])
+            else:
+                user_df['名稱'] =""
+                user_df['名稱'] = user_df['名稱'].astype(str)
+                user_df['代號'] = user_df['代號'].astype(str)
+                user_df.loc[index].at['名稱'] = new_Coname
+                user_df.drop_duplicates()
+            print(user_df['代號'])
+            #user_Coid_CSV_List[index][0]=new_Coid
+            #user_Coid_CSV_List[index][1]=new_Coname
             local_Coid_CSV_is_changed=True
             break
         if(event == '取消'):
+            csv_Row_Edit_Window.close()
+            csv_Row_Edit_Window=None
             break
     if(local_Coid_CSV_is_changed):
+        user_Coid_CSV_List=user_df.values.tolist()
         csv_Row_Edit_Window.close()
         csv_Row_Edit_Window=None
         local_Csv_Window.close()
@@ -126,12 +150,17 @@ def local_CSV_Row_Edit(index): #編輯本地股號表 ->編輯單筆資料
 def local_CSV_usercsvfile_import(isReplace,csv_path): #編輯本地股號表 -> 匯入外部股號表
     global local_Coid_CSV_step,user_Coid_CSV_List,local_Csv_Window
     global local_Coid_CSV_is_changed,user_df
-    import_csvdf = pd.DataFrame(columns = coid_header) #導入pd使用
+    import_csvdf = pd.DataFrame(coid_dict).astype(str) #導入pd使用
     import_csvdf = pd.read_csv(csv_path, sep=',', engine='python')
+    print('名稱' not in import_csvdf.columns)
+    if '名稱' not in import_csvdf.columns:
+        import_csvdf['名稱'] =""
+    import_csvdf['名稱'] = import_csvdf['名稱'].astype(str)
+    import_csvdf['代號'] = import_csvdf['代號'].astype(str)
     import_CSV_List = import_csvdf.values.tolist()
     backup_Coid_CSV_List.append(user_Coid_CSV_List)
     if(isReplace): #取代
-        user_Coid_CSV_List = import_CSV_List
+        #user_Coid_CSV_List = import_CSV_List
         user_df=import_csvdf
     else: #加入
         df_list=[user_df,import_csvdf]
@@ -139,7 +168,8 @@ def local_CSV_usercsvfile_import(isReplace,csv_path): #編輯本地股號表 -> 
         merged_df = merged_df.drop_duplicates()
         user_Coid_CSV_List=merged_df.values.tolist()
         user_df=merged_df
-
+        
+    user_Coid_CSV_List=user_df.values.tolist()
     local_Coid_CSV_is_changed=True
     local_Coid_CSV_step+=1
     local_Csv_Window.close()
