@@ -1,6 +1,7 @@
 import os.path as path
 import os
-from PySimpleGUI.PySimpleGUI import popup, theme_slider_border_width
+from tkinter import Widget
+from typing import Dict
 import scrapy
 import PySimpleGUI as sg
 import configparser
@@ -19,11 +20,8 @@ year_List =[] #存放年份
 season_List =['1','2','3','4'] #存放季度
 #資料存放
 local_Coid_CSV_List =[] #本地股號表存放
-local_Coid_CSV_List_Header = [] #本地股號表標頭
 user_Coid_CSV_List =[] #暫存股號表存放
-user_Coid_CSV_List_Header =[] #暫存股號表標頭
 backup_Coid_CSV_List =[] #備份
-backup_Coid_CSV_List_Header=[] #備份
 
 #State
 local_Coid_CSV_is_changed = False
@@ -44,8 +42,10 @@ csvpath = os.path.join(config_path+local_csv)   #本地股號表路徑
 conf = configparser.ConfigParser()  #創建設定檔對象
 
 #CSV相關
-dict ={'代號' : local_Coid_CSV_List} #建立空的本地股號列表
-csvdf = pd.DataFrame(dict) #導入pd使用
+coid_dict ={'代號':[],'名稱':[]} #建立空的本地股號列表
+coid_header=['代號','名稱']
+local_csvdf = pd.DataFrame(coid_dict) #導入本地股號表pd使用
+user_df = pd.DataFrame(coid_dict) #建立暫存本地股號表pd使用
 
 
 for i in range(2000,this_Year+1): #新增從2000至今年的年份至列表中
@@ -63,7 +63,7 @@ def reset_setting():#重置設定
     sg.popup('已建立設定檔。')
 
 def reset_csv():#重建csv檔
-    csvdf.to_csv(csvpath, index=False)
+    local_csvdf.to_csv(csvpath,index=False,sep=',')
     sg.popup('已建立本地股號表。')
     sg.Print('重建本地股號表')
 
@@ -78,14 +78,17 @@ def check_setting():#檢查設定
 
 def check_local_csv():#檢查本地CSV
     if(path.exists(config_path+local_csv)):
-        global local_Coid_CSV_List,local_Coid_CSV_List_Header,user_Coid_CSV_List,user_Coid_CSV_List_Header
+        global local_Coid_CSV_List,user_Coid_CSV_List,user_df
         sg.Print('已檢查到本地股號表。')
-        csvdf = pd.read_csv(csvpath, sep=',', engine='python', header=None)
-        local_Coid_CSV_List = csvdf.values.tolist()
-        local_Coid_CSV_List_Header = csvdf.iloc[0].tolist()
-        local_Coid_CSV_List = csvdf[1:].values.tolist()
-        user_Coid_CSV_List=local_Coid_CSV_List
-        user_Coid_CSV_List_Header=local_Coid_CSV_List_Header
+        try:
+            local_csvdf = pd.read_csv(csvpath, sep=',', engine='python')
+            local_Coid_CSV_List = local_csvdf.values.tolist()
+            user_Coid_CSV_List=local_Coid_CSV_List
+            user_df=local_csvdf
+        except pd.errors.EmptyDataError:
+            sg.popup('讀取本地股號表時發生錯誤！重建檔案...')
+            reset_csv()
+            check_local_csv()
     else:
         sg.popup('未建立本地股號表，創建中...',title='系統')
         reset_csv()
@@ -95,21 +98,51 @@ check_local_csv()
 
 #方法
 
-def local_CSV_usercsvfile_import(isReplace,csv_path): #匯入外部股號表
-    global local_Coid_CSV_step,user_Coid_CSV_List,user_Coid_CSV_List_Header,local_Csv_Window
-    global local_Coid_CSV_is_changed
-    csvdf = pd.DataFrame(dict) #導入pd使用
-    csvdf = pd.read_csv(csv_path, sep=',', engine='python', header=None)
-    if(isReplace):
-        backup_Coid_CSV_List.append(user_Coid_CSV_List)
-        backup_Coid_CSV_List_Header.append(user_Coid_CSV_List_Header)
-        user_Coid_CSV_List = csvdf.values.tolist()
-        user_Coid_CSV_List_Header = csvdf.iloc[0].tolist()
-        user_Coid_CSV_List = csvdf[1:].values.tolist()
+def local_CSV_Row_Edit(index): #編輯本地股號表 ->編輯單筆資料
+    global local_Csv_Window,local_Coid_CSV_is_changed
+    coid=user_Coid_CSV_List[index][0]
+    try:
+        coname=user_Coid_CSV_List[index][1]
+    except IndexError:
+        coname=''
+    csv_Row_Edit_Window=set_local_CSV_Edit_Row(coid,coname)
+    while True : #監聽回傳
+        event, values = csv_Row_Edit_Window.read()
+        if(event == '保存'):
+            user_Coid_CSV_List[index][0]=str(values['COID'])
+            user_Coid_CSV_List[index][1]=str(values['CONAME'])
+            local_Coid_CSV_is_changed=True
+            break
+        if(event == '取消'):
+            break
+    if(local_Coid_CSV_is_changed):
+        csv_Row_Edit_Window.close()
+        csv_Row_Edit_Window=None
+        local_Csv_Window.close()
+        local_Csv_Window=None
+        local_Csv_Window=set_Local_CSV_Window()
+
+
+def local_CSV_usercsvfile_import(isReplace,csv_path): #編輯本地股號表 -> 匯入外部股號表
+    global local_Coid_CSV_step,user_Coid_CSV_List,local_Csv_Window
+    global local_Coid_CSV_is_changed,user_df
+    import_csvdf = pd.DataFrame(columns = coid_header) #導入pd使用
+    import_csvdf = pd.read_csv(csv_path, sep=',', engine='python')
+    import_CSV_List = import_csvdf.values.tolist()
+    backup_Coid_CSV_List.append(user_Coid_CSV_List)
+    if(isReplace): #取代
+        user_Coid_CSV_List = import_CSV_List
+        user_df=import_csvdf
+    else: #加入
+        df_list=[user_df,import_csvdf]
+        merged_df=pd.concat(df_list,axis=0)
+        merged_df = merged_df.drop_duplicates()
+        user_Coid_CSV_List=merged_df.values.tolist()
+        user_df=merged_df
+
     local_Coid_CSV_is_changed=True
     local_Coid_CSV_step+=1
     local_Csv_Window.close()
-    local_Csv_Window=None
     local_Csv_Window=set_Local_CSV_Window()
 
 def local_CSV_Import_usercsvfile(): #編輯本地股號表 -> 匯入外部股號表
@@ -138,11 +171,19 @@ def local_CSV_Import_usercsvfile(): #編輯本地股號表 -> 匯入外部股號
 
 #視窗設計
 
+def set_local_CSV_Edit_Row(coid,coname): #編輯本地股號表 ->編輯單筆資料
+    Edit_Row_Layout =[
+        [sg.Text('公司股號：'),sg.Input(default_text=coid,size=(5,1),k='COID')],
+        [sg.Text('公司名稱：'),sg.Input(default_text=coname,size=(25,1),k='CONAME')],
+        [sg.Button('保存'),sg.Button('取消')]
+    ]
+    return sg.Window("編輯單筆資料",Edit_Row_Layout,margins=(30,10),finalize=True,modal=True,disable_close=True,disable_minimize=True)
+
 def set_local_CSV_Import_usercsvfile_mode(): #匯入外部股號表 -> 匯入模式
     usercsvfile_Mode_Layout =[
         [sg.Text('選擇匯入模式')],
         [sg.Radio('取代－取代整個股號表',key='ucMode_Replace',group_id='usercsvMode')],
-        [sg.Radio('增加－將CSV內的股號表新增至目前已有',key='ucMode_Add',group_id='usercsvMode')],
+        [sg.Radio('加入－將CSV內的股號表新增至目前已有',key='ucMode_Add',group_id='usercsvMode')],
         [sg.Button('確定'),sg.Button('取消')]
     ]
     return sg.Window("匯入模式",usercsvfile_Mode_Layout,margins=(40,20),finalize=True,modal=True,disable_close=True,disable_minimize=True)
@@ -150,7 +191,7 @@ def set_local_CSV_Import_usercsvfile_mode(): #匯入外部股號表 -> 匯入模
 def set_AutoMode_Window(): #主視窗 -> [自動模式] -> 自動爬取來源
     autoMode_Layout =[
                 [sg.Text('選擇股號來源')],
-                [sg.Radio('從本地股號表讀入',group_id='AM_LoadMode',key='loadFromLocal'),sg.Radio('從CSV檔匯入',group_id='AM_LoadMode',key='loadFromCSV')],
+                [sg.Radio('從本地股號表讀入',group_id='AM_LoadMode',key='loadFromLocal'),sg.Radio('從CSV檔匯入',group_id='AM_LoadMode',key='_loadFromCSV')],
                 [sg.Button('確定'),sg.Button('取消')],
                 [sg.Text('本地股報表位於：\n'+csvpath)]
                      ]
@@ -161,8 +202,8 @@ def set_Main_Window(): #主視窗
                 [sg.Text('資料庫')],
                 [sg.Button('顯示資料庫資料')],
                 [sg.Text('（自動＼手動）抓取設定')],
-                [sg.Combo(year_List, size=(6,5), key='SearchYear',default_value=this_Year),sg.Text('年'),sg.Combo(season_List, size=(2,5), key='SearchSeason'),sg.Text('季度'),sg.Text('（手動）查詢股號'),sg.Input(key='Manual_coid',size=(10,5))],
-                [sg.Text('爬取模式'),sg.Radio('自動',group_id='SMode',default=True,key='Auto'),sg.Radio('手動',group_id='SMode',key='Manual')],
+                [sg.Combo(year_List, size=(6,5), key='_SearchYear',default_value=this_Year),sg.Text('年'),sg.Combo(season_List, size=(2,5), key='_SearchSeason'),sg.Text('季度'),sg.Text('（手動）查詢股號'),sg.Input(key='_Manual_coid',size=(10,5))],
+                [sg.Text('爬取模式'),sg.Radio('自動',group_id='SMode',default=True,key='_Auto'),sg.Radio('手動',group_id='SMode',key='_Manual')],
                 [sg.Button('開始爬取')],
                 [sg.Text('運行計算式')],
                 [sg.Button('公式一'),sg.Button('公式二'),sg.Button('公式三'),sg.Button('公式四')],
@@ -173,17 +214,20 @@ def set_Main_Window(): #主視窗
 
 def set_Local_CSV_Window(): #主視窗 -> 編輯本地股號表
     local_Coid_CSV_Layout =[
+        [sg.Text('輸入股號過濾'),sg.Input(size=(5,1)),sg.Button('過濾')],
         [sg.Text('已變更資料，尚未保存' if local_Coid_CSV_is_changed else '原始資料'),sg.Button('復原',disabled=not(local_Coid_CSV_is_changed))],
         [sg.Table(values=user_Coid_CSV_List,
-        headings=user_Coid_CSV_List_Header,
+        headings=['代號','名稱'],
         auto_size_columns=False,
         display_row_numbers=False,
-        num_rows=min(25,len(user_Coid_CSV_List)),select_mode="browse",key='local_Coid_CSV_Table')],
-        [sg.Button('關閉且「不保存」變更'),sg.Button('關閉且「保存」變更'),sg.Button('保存當前變更'),sg.Button('重新整理'),
-        sg.Button('匯入外部股號表'),sg.Button('重置本地股號表')],
+        num_rows=min(25,len(user_Coid_CSV_List)),select_mode="browse",enable_events=True,
+        key='_local_Coid_CSV_Table',right_click_menu=['右鍵',['編輯','刪除']],justification='center',bind_return_key=True)],
+        [sg.Button('關閉且「不保存」變更'),sg.Button('關閉且「保存」變更')],
+        [sg.Button('保存當前變更'),sg.Button('重新整理')],
+        [sg.Button('匯入外部股號表'),sg.Button('重置本地股號表')],
         [sg.Text(f'本地股號表CSV位於{csvpath}')]
-            ]
-    return sg.Window("編輯本地股號表",local_Coid_CSV_Layout,grab_anywhere=False, finalize=True,modal=True)
+        ]
+    return sg.Window("編輯本地股號表",local_Coid_CSV_Layout,grab_anywhere=False, finalize=True,modal=True,disable_close=True,disable_minimize=True)
 
 def set_Setting_Window(): #主視窗 -> 設定
     setting_Layout = [
@@ -198,15 +242,17 @@ def set_Setting_Window(): #主視窗 -> 設定
     return sg.Window("程式設定",setting_Layout, margins=(10,5),finalize=True,modal=True,disable_close=True,disable_minimize=True)
 
 main_Window,setting_Window,aM_Window,local_Csv_Window,local_Csv_imode_Window = set_Main_Window(),None,None,None,None
+csv_Row_Edit_Window=None
 print('主視窗載入完成。')
 
 while True: #監控視窗回傳
     window,event, values = sg.read_all_windows()
+    sg.Print(f'event:{event},values:{values}')
     if window == main_Window: #主視窗
         if event in (sg.WIN_CLOSED,'離開'):
             break
         if event == "開始爬取":
-            if(len(values['SearchYear']) and len(values['SearchSeason'])): #檢查是否有選擇年與季度
+            if(len(values['_SearchYear']) and len(values['_SearchSeason'])): #檢查是否有選擇年與季度
                 if(values['Auto'] is True): #檢查是否使用自動模式
                     sg.popup('使用自動模式抓取')
                     aM_Window=set_AutoMode_Window()
@@ -266,14 +312,52 @@ while True: #監控視窗回傳
             aM_Window=None
     
     if window == local_Csv_Window: # 主視窗 -> 編輯本地股號表
-        if event in (sg.WIN_CLOSED,'關閉且「不保存」變更'):
+        window.bind("<Double-Button-1>","編輯")
+        if event in ('關閉且「不保存」變更'):
+            user_Coid_CSV_List = local_Coid_CSV_List
+            local_Coid_CSV_is_changed = False
+            backup_Coid_CSV_List.clear()
+            local_Coid_CSV_step=0
+            window.close()
+            local_Csv_Window=None
+        if event in('關閉且「保存」變更'):
+            print(user_df)
+            user_df.to_csv(csvpath,index=False,sep=',', header=coid_dict)
+            check_local_csv()
+            backup_Coid_CSV_List.clear()
+            local_Coid_CSV_step=0
             window.close()
             local_Csv_Window=None
         if event == "重新整理":
-            window.close()
-            local_Csv_Window=None
-            local_Csv_Window=set_Local_CSV_Window()
+            if(local_Coid_CSV_is_changed):
+                if(sg.popup_ok_cancel('你股號表尚未存檔，重新整理將會喪失變更的資料並還原修改前的樣子',title='重新整理',modal=True) == 'OK'):
+                    window.close()
+                    check_local_csv()
+                    local_Csv_Window=None
+                    local_Coid_CSV_is_changed=False
+                    local_Csv_Window=set_Local_CSV_Window()
+            else:
+                window.close()
+                check_local_csv()
+                local_Csv_Window=None
+                local_Csv_Window=set_Local_CSV_Window()
         if event == "匯入外部股號表":
             local_CSV_Import_usercsvfile()
+        if event == "重置本地股號表":
+            if(sg.popup_ok_cancel('是否重置股號表？',title='確認重置',modal=True) == 'OK'):
+                reset_csv()
+                sg.popup('已重置！')
+                check_local_csv()
+                window.close()
+                local_Csv_Window=None
+                local_Coid_CSV_is_changed=False
+                backup_Coid_CSV_List.clear()
+                local_Coid_CSV_step=0
+                local_Csv_Window=set_Local_CSV_Window()
+        if event == "編輯":
+            select_row=values['_local_Coid_CSV_Table']
+            if select_row != []:
+                select_row=int(select_row[0])
+                local_CSV_Row_Edit(select_row)
     
 window.close()
