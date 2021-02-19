@@ -48,7 +48,12 @@ class StockSpider(scrapy.Spider):
             print(self.noExist[printdata])
 
     def manual_Mode(self,CO_ID): #手動模式
-        self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={CO_ID}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=C') #帶入網址序列
+        if((len(CO_ID)==4) and CO_ID.isnumeric()):
+            self.exist+=1
+            self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={CO_ID}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=C') #帶入網址序列
+        else:
+            print('請輸入正確的四位數純數字股號')
+            pass
     
     def output_EmptyList_csv(self): #列出未存在股號
         now = datetime.now()
@@ -68,14 +73,16 @@ class StockSpider(scrapy.Spider):
     
     def __init__(self,Year='',Season='',CSV='',Mode='',CO_ID='', **kwargs): #初始化動作
         dispatcher.connect(self.spider_closed, signals.spider_closed) #設置爬蟲關閉時的動作
-        self.import_csv=CSV #匯入CSV之路徑 -a CSV 'Path'
         self.Year=Year #帶入參數年份 -a Year 數字字串
         self.Season=Season #帶入參數季度 -a Season 數字字串
         self.Mode=Mode #帶入爬蟲模式 -a Mode 文字字串，Auto與Manual模式
-        if(Mode=='Auto'):
+        if(Mode=='Auto' or Mode=='A'):
+            self.import_csv=CSV #匯入CSV之路徑 -a CSV 'Path'
             self.auto_Mode()
-        else:
+        elif (Mode=='Manual' or Mode=='M'):
             self.manual_Mode(CO_ID)
+        else:
+            print("請輸入正確的抓取參數-a Mode=[參數]\n參數\n 自動模式：Auto或A，加上-a CSV=[檔案路徑]\n手動輸入股號模式：Manual或M，加上-CO_ID[股號]")
         super().__init__(**kwargs)  # python3
 
     def is_Number(self,s): #檢查字串是否為數目
