@@ -30,6 +30,7 @@ class stockPriceSpider(scrapy.Spider):
     noExist=[]
     twse_SDate=''
     tpex_SDate=''
+    #State
     is_TWSE_open=False
     is_TPEX_open=False
     #Info
