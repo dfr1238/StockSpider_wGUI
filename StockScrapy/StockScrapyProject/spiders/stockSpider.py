@@ -16,7 +16,7 @@ class StockSpider(scrapy.Spider):
     Year=''
     Season=''
     Mode=''
-    name = "StockSpider" #爬蟲名稱。
+    name = 'StockSpider' #爬蟲名稱。
     start_urls=[]
     noExist=[]
     wait_url_A=0
@@ -42,7 +42,9 @@ class StockSpider(scrapy.Spider):
             print("超額運算中，開始處理A類RID") 
         else:
             print("正常運算當中")
-        print(f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl},目前筆數:{self.current},確認存在股數:{self.exist},確認未存在股號數:{len(self.noExist)},待導入A類查尋筆數:{self.wait_url_A}")
+        info=(f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl},目前筆數:{self.current},確認存在股數:{self.exist},確認未存在股號數:{len(self.noExist)},待導入A類查尋筆數:{self.wait_url_A}")
+        print(info)
+        sg.Print(info)
         print("\n未存在股號列表：")
         for printdata in range(len(self.noExist)):
             print(self.noExist[printdata])
@@ -131,7 +133,7 @@ class StockSpider(scrapy.Spider):
         items['SUB_DATA_TYPE']= '個別財務報告' if (report_ID == 'A')  else '合併財務報告' 
         items['CO_ID'] = str(company_Id[0])
         co_name = str(response.xpath('/html/body/div[2]/div[1]/div[2]/span[1]//text()').get())
-        items['CO_NAME'] = co_name
+        items['CO_FULL_NAME'] = co_name
         items['Syear'] = self.Year
         items['SSeason'] = self.Season
         #主要爬蟲區

@@ -161,7 +161,7 @@ class stockPriceSpider(scrapy.Spider):
                     else:
                         tpex_price=None
                     items['CO_ID']=str(co_id)
-                    items['CO_NAME']=str(tpex_co_name)
+                    items['CO_SHORT_NAME']=str(tpex_co_name)
                     items['Price']=tpex_price
                     items['SUB_DATA_TYPE']='TPEX'
                     items['SYear']=str(self.Year)
@@ -213,7 +213,7 @@ class stockPriceSpider(scrapy.Spider):
                         else:
                             twse_price=None
                         items['CO_ID']=str(co_id)
-                        items['CO_NAME']=str(twse_co_name)
+                        items['CO_SHORT_NAME']=str(twse_co_name)
                         items['Price']=twse_price
                         items['SUB_DATA_TYPE']='TWSE'
                         items['SYear']=str(self.Year)

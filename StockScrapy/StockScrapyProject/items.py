@@ -11,7 +11,7 @@ class StockSpider_items(scrapy.Item):
     DATA_TYPE = scrapy.Field() #資料類型－財務報告
     SUB_DATA_TYPE= scrapy.Field() #子資料類別－報告類型
     CO_ID = scrapy.Field() #股號
-    CO_NAME = scrapy.Field() #公司名稱
+    CO_FULL_NAME = scrapy.Field() #公司全名
     Syear = scrapy.Field() #年度
     SSeason = scrapy.Field() #季度
     ##A
@@ -34,7 +34,7 @@ class StockPrice_items(scrapy.Item):
     DATA_TYPE = scrapy.Field() #資料類型－股價
     SUB_DATA_TYPE= scrapy.Field() #子資料類別－交易所
     CO_ID = scrapy.Field()  #股號
-    CO_NAME = scrapy.Field()    #公司名稱
+    CO_SHORT_NAME = scrapy.Field()    #公司縮名
     SYear = scrapy.Field()  #年度
     SDate = scrapy.Field()  #詳細日期
     Price = scrapy.Field()  #收盤價
