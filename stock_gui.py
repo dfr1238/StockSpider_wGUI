@@ -6,8 +6,7 @@ import PySimpleGUI as sg
 import configparser
 import pandas as pd
 from datetime import datetime
-from scrapy.crawler import CrawlerProcess
-from scrapy.utils.project import get_project_settings
+from StockScrapyProject.StockScrapyProject.run_scraper import Scraper
 import math
 
 sg.theme('DarkAmber') #設定顏色主題
@@ -123,6 +122,15 @@ def check_local_csv():#檢查本地CSV
 
 check_setting()
 check_local_csv()
+
+#爬蟲調用
+
+scrapyer = Scraper()
+
+def call_Stock_Spider():
+    global csvpath
+    scrapyer.run_StockSpider(Year=str(this_Year-1),Season=str(2),Mode='Auto',CSV=csvpath)
+    sg.Print()#開始爬蟲
 
 #普通應用方法
 
@@ -571,6 +579,13 @@ while True: #監控視窗回傳
                 sg.popup('請先選擇有效的項目進行來編輯')
             window.make_modal()
     
+    if window == auto_Spider_Stock_Window: #爬取模式選擇 -> 批次模式
+        if event == '確定':
+            call_Stock_Spider()
+            window.close()
+        if event == '返回':
+            window.close()
+
     if window == Spider_Stock_Select_Mode_Window: #主視窗 ->爬取模式選擇
         if event == '確定':
             if(values['_Auto']):

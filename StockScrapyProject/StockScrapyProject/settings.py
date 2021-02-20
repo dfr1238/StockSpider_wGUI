@@ -7,10 +7,10 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
-BOT_NAME = 'StockScrapyProject'
+BOT_NAME = 'StockSpider'
 
-SPIDER_MODULES = ['StockScrapyProject.spiders']
-NEWSPIDER_MODULE = 'StockScrapyProject.spiders'
+SPIDER_MODULES = ['StockScrapyProject.StockScrapyProject.spiders']
+NEWSPIDER_MODULE = 'StockScrapyProject.StockScrapyProject.spiders'
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
@@ -66,7 +66,7 @@ RETRY_TIMES = 15
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'StockScrapyProject.pipelines.MongoPipeline': 500,
+    'StockScrapyProject.StockScrapyProject.pipelines.MongoPipeline': 500,
 }
 #
 

@@ -11,7 +11,7 @@ from pydispatch import dispatcher
 class stockPriceSpider(scrapy.Spider):
     Type='股價資料'
     SubType=''
-    name='stockPriceSpider' #爬蟲名稱
+    name='StockPriceSpider' #爬蟲名稱
     Year='' #紀錄西元年份
     ROC_Year='' #記錄民國年份
     Month=''
