@@ -9,6 +9,7 @@ from scrapy import item
 from ..items import StockSpider_items
 from pydispatch import dispatcher
 from datetime import datetime
+import logging
 
 class StockSpider(scrapy.Spider):
     Type='財務報告'
@@ -39,11 +40,11 @@ class StockSpider(scrapy.Spider):
 
     def print_info(self): #列出爬蟲資訊
         if (self.current > self.ready_crawl):
-            print("超額運算中，開始處理A類RID") 
+            logging.info("超額運算中，開始處理A類RID") 
         else:
-            print("正常運算當中")
+            logging.info("正常運算當中")
         info=(f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl},目前筆數:{self.current},確認存在股數:{self.exist},確認未存在股號數:{len(self.noExist)},待導入A類查尋筆數:{self.wait_url_A}")
-        print(info)
+        logging.info(info)
         sg.Print(info)
         print("\n未存在股號列表：")
         for printdata in range(len(self.noExist)):
@@ -54,7 +55,7 @@ class StockSpider(scrapy.Spider):
             self.exist+=1
             self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={CO_ID}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=C') #帶入網址序列
         else:
-            print('請輸入正確的四位數純數字股號')
+            logging.error('請輸入正確的四位數純數字股號')
             pass
     
     def output_EmptyList_csv(self): #列出未存在股號
@@ -66,9 +67,9 @@ class StockSpider(scrapy.Spider):
             df = pd.DataFrame(dict)
             filename=f'..\{dt_string}-財務報告-未存在股號.csv'
             df.to_csv(filename, index=False)
-            print(f'已匯出未存在的股號至{filename}')
+            logging.info(f'已匯出未存在的股號至{filename}')
         else:
-            print('無缺漏股號。')
+            logging.info('無缺漏股號。')
 
     def spider_closed(self, spider): #爬蟲關閉時的動作
         self.output_EmptyList_csv()
@@ -79,12 +80,14 @@ class StockSpider(scrapy.Spider):
         self.Season=Season #帶入參數季度 -a Season 數字字串
         self.Mode=Mode #帶入爬蟲模式 -a Mode 文字字串，Auto與Manual模式
         if(Mode=='Auto' or Mode=='A'):
+            logging.info(f'目前輸入的參數，年份：{Year}、季度{Season}、模式：{Mode}、CSV路徑:{CSV}')
             self.import_csv=CSV #匯入CSV之路徑 -a CSV 'Path'
             self.auto_Mode()
         elif (Mode=='Manual' or Mode=='M'):
+            logging.info(f'目前輸入的參數，年份：{Year}、季度{Season}、模式：{Mode}、股號:{CO_ID}')
             self.manual_Mode(CO_ID)
         else:
-            print("請輸入正確的抓取參數-a Mode=[參數]\n參數\n 自動模式：Auto或A，加上-a CSV=[檔案路徑]\n手動輸入股號模式：Manual或M，加上-CO_ID[股號]")
+            logging.error("請輸入正確的抓取參數-a Mode=[參數]\n參數\n 自動模式：Auto或A，加上-a CSV=[檔案路徑]\n手動輸入股號模式：Manual或M，加上-CO_ID[股號]")
         super().__init__(**kwargs)  # python3
 
     def is_Number(self,s): #檢查字串是否為數目
@@ -120,12 +123,12 @@ class StockSpider(scrapy.Spider):
                 self.wait_url_A-=1
         else:
             if(str(report_ID[0])=='A'): #如果是回報A則記錄為無資料股
-                print("該股A與C類皆無資料，記錄至未存在表中。")
+                logging.error("該股A與C類皆無資料，記錄至未存在表中。")
                 self.noExist.append(str(company_Id[0]))
                 self.wait_url_A-=1
                 pass
             else: #試圖用回報A連結重新爬取
-                print("該股類型C無資料，轉入類型A查資料。")
+                logging.info("該股類型C無資料，轉入類型A查資料。")
                 self.wait_url_A+=1
                 self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={company_Id[0]}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=A')
                 pass
