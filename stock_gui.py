@@ -8,6 +8,7 @@ import pandas as pd
 from datetime import datetime
 from StockScrapyProject.StockScrapyProject.run_scraper import Scraper
 import math
+import sys
 
 sg.theme('DarkAmber') #設定顏色主題
 sg.set_options(auto_size_buttons=True)
@@ -19,6 +20,9 @@ this_season = math.ceil(this_month/4) #換算季度
 year_List =[] #存放年份
 season_List =['1','2','3','4'] #存放季度
 this_year_season_List=[]
+
+search_Year=''
+search_Season=''
 
 for i in range(1,this_season+1):
     this_year_season_List.append(str(i))
@@ -127,10 +131,21 @@ check_local_csv()
 
 scrapyer = Scraper()
 
-def call_Stock_Spider():
+def call_Stock_Spider(isAutoMode,isLocal,LOAD_CSVPATH,M_CO_ID):
     global csvpath
-    scrapyer.run_StockSpider(Year=str(this_Year-1),Season=str(2),Mode='Auto',CSV=csvpath)
-    sg.Print()#開始爬蟲
+    if(isAutoMode):
+        if(isLocal):
+            scrapyer.set_StockSpider(Year=search_Year,Season=search_Season,Mode='Auto',CSV=csvpath)
+            scrapyer.run_StockSpider()
+        else:
+            scrapyer.set_StockSpider(Year=search_Year,Season=search_Season,Mode='Auto',CSV=LOAD_CSVPATH)
+            scrapyer.run_StockSpider()
+    else:
+        scrapyer.set_StockSpider(Year=search_Year,Season=search_Season,Mode='Manual',CO_ID=M_CO_ID)
+        scrapyer.run_StockSpider()
+    print('\n')
+    sg.popup_ok('抓取股票財務報告完成！程式將重新起動！')
+    os.execv(sys.argv[0], sys.argv)
 
 #普通應用方法
 
@@ -341,7 +356,7 @@ def set_local_CSV_Import_usercsvfile_mode(): #匯入外部股號表 -> 匯入模
 def set_AutoMode_Window(): #多筆模式 -> 自動爬取來源
     autoMode_Layout =[
                 [sg.Text('選擇股號來源')],
-                [sg.Radio('從本地股號表讀入',group_id='AM_LoadMode',key='loadFromLocal'),sg.Radio('從CSV檔匯入',group_id='AM_LoadMode',key='_loadFromCSV')],
+                [sg.Radio('從本地股號表讀入',group_id='AM_LoadMode',key='_loadFromLocal',default=True),sg.Radio('從CSV檔匯入',group_id='AM_LoadMode',key='_loadFromCSV')],
                 [sg.Button('確定'),sg.Button('取消')],
                 [sg.Text('本地股報表位於：\n'+csvpath)]
                      ]
@@ -350,21 +365,15 @@ def set_AutoMode_Window(): #多筆模式 -> 自動爬取來源
 def set_manual_Spider_Stock_Window(): #爬取模式 -> 單筆模式
     manual_Stock_Spider_Layout =[
         [sg.Text('輸入股號：'),sg.Input(size=(5,1),k='_Manual_coid')],
-        [sg.Text('從')],
-        [sg.Combo(year_List, size=(6,5), key='_StartSearchYear',default_value=this_Year-1),sg.Text('年'),sg.Combo(season_List, size=(2,5), key='_StartSearchSeason',default_value=push_4_season_back()),sg.Text('季度')],
-        [sg.Text('至')],
-        [sg.Combo(year_List, size=(6,5), key='_LastSearchYear',default_value=this_Year),sg.Text('年'),sg.Combo(this_year_season_List, size=(2,5), key='_LastSearchSeason',default_value=this_season),sg.Text('季度')],
+        [sg.Combo(year_List, size=(6,5), key='_StartSearchYear',default_value=this_Year,enable_events=True),sg.Text('年'),sg.Combo(this_year_season_List, size=(2,5), key='_StartSearchSeason',default_value=this_season,enable_events=True),sg.Text('季度')],
         [sg.Button('確定'),sg.Button('返回')]
     ]
     return sg.Window('單筆爬取財務報表',manual_Stock_Spider_Layout,margins=(30,10),finalize=True,modal=True,disable_close=True,disable_minimize=True)
 
 def set_auto_Spider_Stock_Window(): #爬取模式 -> 多筆模式
     auto_Stock_Spider_Layout =[
-        [sg.Text('年度與季度範圍')],
-        [sg.Text('從')],
-        [sg.Combo(year_List, size=(6,5), key='_StartSearchYear',default_value=this_Year-1),sg.Text('年'),sg.Combo(season_List, size=(2,5), key='_StartSearchSeason',default_value=push_4_season_back()),sg.Text('季度')],
-        [sg.Text('至')],
-        [sg.Combo(year_List, size=(6,5), key='_LastSearchYear',default_value=this_Year),sg.Text('年'),sg.Combo(this_year_season_List, size=(2,5), key='_LastSearchSeason',default_value=this_season),sg.Text('季度')],
+        [sg.Text('年度與季度')],
+        [sg.Combo(year_List, size=(6,5), key='_StartSearchYear',default_value=this_Year-1,enable_events=True),sg.Text('年'),sg.Combo(this_year_season_List, size=(2,5), key='_StartSearchSeason',default_value=this_season,enable_events=True),sg.Text('季度')],
         [sg.Button('確定'),sg.Button('返回')]
     ]
     return sg.Window('多筆爬取財務報表',auto_Stock_Spider_Layout,margins=(30,10),finalize=True,modal=True,disable_close=True,disable_minimize=True)
@@ -490,6 +499,20 @@ while True: #監控視窗回傳
         if event in (sg.WIN_CLOSED,'取消'):
             window.close()
             aM_Window=None
+        if event =='確定':
+            if(values['_loadFromLocal']):
+                window.close()
+                aM_Window=None
+                call_Stock_Spider(True,True,'','')
+            else:
+                custom_Stock_Spider_CSVPATH = sg.popup_get_file('讀入外部股號表',no_window=True,file_types=(("外部CSV股號表","*.csv"),))
+                if(custom_Stock_Spider_CSVPATH!=''):
+                    window.close()
+                    aM_Window=None
+                    call_Stock_Spider(True,False,custom_Stock_Spider_CSVPATH,'')
+                else:
+                    window.close()
+                    aM_Window=None
     
     if window == csv_Row_Add_Window: # 編輯本地股號表 -> 新增單筆資料
         if event =='保存':
@@ -579,12 +602,39 @@ while True: #監控視窗回傳
                 sg.popup('請先選擇有效的項目進行來編輯')
             window.make_modal()
     
-    if window == auto_Spider_Stock_Window: #爬取模式選擇 -> 批次模式
+    if window == manual_Spider_Stock_Window: #爬取模式選擇 -> 單筆模式
+        if event == "_StartSearchYear":
+            if(values['_StartSearchYear']!=this_Year):
+                window['_StartSearchSeason'].update(values=season_List,set_to_index=0)
+            else:
+                window['_StartSearchSeason'].update(values=this_year_season_List,set_to_index=0)
         if event == '確定':
-            call_Stock_Spider()
             window.close()
+            search_Year = str(values['_StartSearchYear'])
+            search_Season = str(values['_StartSearchSeason'])
+            manual_Spider_Stock_Window=None
+            call_Stock_Spider(False,False,'',str(values['_Manual_coid']))
         if event == '返回':
             window.close()
+            manual_Spider_Stock_Window=None
+
+    if window == auto_Spider_Stock_Window: #爬取模式選擇 -> 批次模式
+        if event == "_StartSearchYear":
+            if(values['_StartSearchYear']!=this_Year):
+                window['_StartSearchSeason'].update(values=season_List,set_to_index=0)
+            else:
+                window['_StartSearchSeason'].update(values=this_year_season_List,set_to_index=0)
+        if event == '確定':
+            window.close()
+            search_Year.append(int(values['_StartSearchYear']))
+            search_Year.append(int(values['_LastSearchYear']))
+            search_Season.append(int(values['_StartSearchSeason']))
+            search_Season.append(int(values['_LastSearchSeason']))
+            auto_Spider_Stock_Window=None
+            aM_Window=set_AutoMode_Window()
+        if event == '返回':
+            window.close()
+            auto_Spider_Stock_Window=None
 
     if window == Spider_Stock_Select_Mode_Window: #主視窗 ->爬取模式選擇
         if event == '確定':
