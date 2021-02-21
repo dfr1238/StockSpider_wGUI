@@ -1,0 +1,1 @@
+pyinstaller --clean --win-private-assemblies -F .\stock_gui.spec
