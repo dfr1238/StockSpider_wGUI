@@ -2,9 +2,9 @@ import scrapy
 import csv
 from scrapy import signals
 import urllib.parse as urlParse
+import PySimpleGUI as sg
 from urllib.parse import parse_qs
 import pandas as pd
-import PySimpleGUI as sg
 from scrapy import item
 from ..items import StockSpider_items
 from pydispatch import dispatcher
@@ -15,6 +15,7 @@ class StockSpider(scrapy.Spider):
     Type='財務報告'
     SubType=''
     Year=''
+    info=''
     Season=''
     Mode=''
     name = 'StockSpider' #爬蟲名稱。
@@ -39,13 +40,17 @@ class StockSpider(scrapy.Spider):
                     self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={Co_id}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=C') #帶入網址序列
 
     def print_info(self): #列出爬蟲資訊
+        title=''
         if (self.current > self.ready_crawl):
+            title="超額運算中，開始處理A類RID"
             logging.info("超額運算中，開始處理A類RID") 
         else:
+            title="正常運算當中"
             logging.info("正常運算當中")
-        info=(f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl},目前筆數:{self.current},確認存在股數:{self.exist},確認未存在股號數:{len(self.noExist)},待導入A類查尋筆數:{self.wait_url_A}")
-        logging.info(info)
-        sg.Print(info)
+        self.info=(f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl}\n目前筆數:{self.current},確認存在股數:{self.exist}\n確認未存在股號數:{len(self.noExist)},待導入A類查尋筆數:{self.wait_url_A}")
+        if(self.current%15==0):
+            sg.SystemTray.notify(title,self.info)
+        logging.info(self.info)
         print("\n未存在股號列表：")
         for printdata in range(len(self.noExist)):
             print(self.noExist[printdata])
@@ -74,6 +79,7 @@ class StockSpider(scrapy.Spider):
 
     def spider_closed(self, spider): #爬蟲關閉時的動作
         self.output_EmptyList_csv()
+        sg.popup(self.info)
     
     def __init__(self,Year='',Season='',CSV='',Mode='',CO_ID='', **kwargs): #初始化動作
         dispatcher.connect(self.spider_closed, signals.spider_closed) #設置爬蟲關閉時的動作
@@ -81,10 +87,12 @@ class StockSpider(scrapy.Spider):
         self.Season=Season #帶入參數季度 -a Season 數字字串
         self.Mode=Mode #帶入爬蟲模式 -a Mode 文字字串，Auto與Manual模式
         if(Mode=='Auto' or Mode=='A'):
+            sg.SystemTray.notify('初始化','以批次模式進行中...')
             logging.info(f'目前輸入的參數，年份：{Year}、季度{Season}、模式：{Mode}、CSV路徑:{CSV}')
             self.import_csv=CSV #匯入CSV之路徑 -a CSV 'Path'
             self.auto_Mode()
         elif (Mode=='Manual' or Mode=='M'):
+            sg.SystemTray.notify('初始化','以單筆模式進行中...')
             logging.info(f'目前輸入的參數，年份：{Year}、季度{Season}、模式：{Mode}、股號:{CO_ID}')
             self.manual_Mode(CO_ID)
         else:

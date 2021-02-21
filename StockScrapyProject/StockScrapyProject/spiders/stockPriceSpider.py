@@ -2,6 +2,7 @@ from typing import Counter
 import scrapy
 from scrapy import signals
 import csv
+import PySimpleGUI as sg
 import pandas as pd
 from datetime import datetime
 from ..items import StockPrice_items
@@ -16,6 +17,7 @@ class stockPriceSpider(scrapy.Spider):
     ROC_Year='' #記錄民國年份
     Month=''
     Day=''
+    info=''
     Date=''
     Co_ids=[]
 
@@ -97,8 +99,11 @@ class stockPriceSpider(scrapy.Spider):
 
     def spider_closed(self, spider): #爬蟲關閉時的動作
         self.output_EmptyList_csv()
+        sg.popup(self.se_status)
 
     def check_se_parse(self,response):
+        title='正在線上檢查今日證券交換所是否開盤...'
+        sg.SystemTray.notify(title,'')
         domain = urlParse.urlparse(response.url).hostname
         print('線上檢查今日證券交換所是否開盤...')
         print(f'網域：{domain}')
@@ -121,6 +126,7 @@ class stockPriceSpider(scrapy.Spider):
             self.se_status='TPEX未收盤，TWSE已收盤'
         else:
             self.se_status='TWSE與TPEX未收盤'
+        sg.SystemTray.notify(self.se_status,'')
 
     def tpex_mining_Data_Parse(self,response):
         local_Co_ids=[]
