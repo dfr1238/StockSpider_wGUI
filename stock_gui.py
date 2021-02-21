@@ -1,14 +1,12 @@
 import os.path as path
 import os
 from typing import Dict
-import scrapy
 import PySimpleGUI as sg
 import configparser
 import pandas as pd
 from datetime import datetime
 from StockScrapyProject.StockScrapyProject.run_scraper import Scraper
 import math
-import sys
 
 sg.theme('DarkAmber') #設定顏色主題
 sg.set_options(auto_size_buttons=True)
@@ -63,7 +61,7 @@ user_df.astype("string") #設定資料類型為字串
 local_csvdf.astype("string") #設定資料類型為字串
 
 
-for i in range(2000,this_Year+1): #新增從2000至今年的年份至列表中
+for i in range(2019,this_Year+1): #新增從2000至今年的年份至列表中
     year_List.append('%4s' % i)
 
 def push_4_season_back(): #往前推四個季度
@@ -144,8 +142,8 @@ def call_Stock_Spider(isAutoMode,isLocal,LOAD_CSVPATH,M_CO_ID):
         scrapyer.set_StockSpider(Year=search_Year,Season=search_Season,Mode='Manual',CO_ID=M_CO_ID)
         scrapyer.run_StockSpider()
     print('\n')
-    sg.popup_ok('抓取股票財務報告完成！程式將重新起動！')
-    os.execv(sys.argv[0], sys.argv)
+    sg.popup_ok('抓取股票財務報告完成！程式將會關閉！')
+    os._exit(0)
 
 #普通應用方法
 
@@ -447,6 +445,7 @@ while True: #監控視窗回傳
         if event in (sg.WIN_CLOSED,'離開'):
             break
         if event == "啟用爬取程式":
+            sg.popup('由於Scrapy框架的天生限制。\n在執行完一個爬蟲之後程式將會自動關閉，手動開啟後得以進行下一個爬蟲作業。',title='注意')
             Spider_Stock_Select_Mode_Window=set_Spider_Stock_Select_Mode_Window()
 
         if event == "公式一":
