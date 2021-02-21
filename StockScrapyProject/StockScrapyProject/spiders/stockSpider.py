@@ -54,6 +54,7 @@ class StockSpider(scrapy.Spider):
         if((len(CO_ID)==4) and CO_ID.isnumeric()):
             self.exist+=1
             self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={CO_ID}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=C') #帶入網址序列
+            self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={CO_ID}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=A') #帶入網址序列
         else:
             logging.error('請輸入正確的四位數純數字股號')
             pass
@@ -65,7 +66,7 @@ class StockSpider(scrapy.Spider):
             self.noExist = list(filter(None, self.noExist))
             dict ={'代號' : self.noExist}
             df = pd.DataFrame(dict)
-            filename=f'..\{dt_string}-財務報告-未存在股號.csv'
+            filename=f'.\{dt_string}-財務報告-未存在股號.csv'
             df.to_csv(filename, index=False)
             logging.info(f'已匯出未存在的股號至{filename}')
         else:
@@ -112,6 +113,7 @@ class StockSpider(scrapy.Spider):
                     items[tables_ItemsName[tableID]] = None
 
     def parse(self, response): #擷取開始
+        _page_exist=True
         items = StockSpider_items()# 匯入資料集。
         parsed = urlParse.urlparse(response.request.url)
         company_Id=parse_qs(parsed.query)['CO_ID'] #獲取網址股號
@@ -123,29 +125,32 @@ class StockSpider(scrapy.Spider):
                 self.wait_url_A-=1
         else:
             if(str(report_ID[0])=='A'): #如果是回報A則記錄為無資料股
+                _page_exist=False
                 logging.error("該股A與C類皆無資料，記錄至未存在表中。")
                 self.noExist.append(str(company_Id[0]))
                 self.wait_url_A-=1
                 pass
             else: #試圖用回報A連結重新爬取
+                _page_exist=False
                 logging.info("該股類型C無資料，轉入類型A查資料。")
                 self.wait_url_A+=1
                 self.start_urls.append(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={company_Id[0]}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=A')
                 pass
-        items['DATA_TYPE']=self.Type
-        items['SUB_DATA_TYPE']= '個別財務報告' if (report_ID == 'A')  else '合併財務報告' 
-        items['CO_ID'] = str(company_Id[0])
-        co_name = str(response.xpath('/html/body/div[2]/div[1]/div[2]/span[1]//text()').get())
-        items['CO_FULL_NAME'] = co_name
-        items['Syear'] = self.Year
-        items['SSeason'] = self.Season
-        #主要爬蟲區
-        tables1_ID=['1100','1110','1120','1136','1139','25XX','3110']
-        tables1_ItemsName=['A1','A2','A3','A4','A5','A6','A7']
-        tables2_ID=['4000','6900','7000','9850']
-        tables2_ItemsName=['B1','B2','B3','B4']
-        self.get_From_Table(items,response,tables1_ID,tables1_ItemsName)
-        self.get_From_Table(items,response,tables2_ID,tables2_ItemsName)
-        yield(items)
+        if(_page_exist):
+            items['DATA_TYPE']=self.Type
+            items['SUB_DATA_TYPE']= '個別財務報告' if (report_ID == 'A')  else '合併財務報告' 
+            items['CO_ID'] = str(company_Id[0])
+            co_name = str(response.xpath('/html/body/div[2]/div[1]/div[2]/span[1]//text()').get())
+            items['CO_FULL_NAME'] = co_name
+            items['Syear'] = self.Year
+            items['SSeason'] = self.Season
+            #主要爬蟲區
+            tables1_ID=['1100','1110','1120','1136','1139','25XX','3110']
+            tables1_ItemsName=['A1','A2','A3','A4','A5','A6','A7']
+            tables2_ID=['4000','6900','7000','9850']
+            tables2_ItemsName=['B1','B2','B3','B4']
+            self.get_From_Table(items,response,tables1_ID,tables1_ItemsName)
+            self.get_From_Table(items,response,tables2_ID,tables2_ItemsName)
+            yield(items)
         self.print_info()
         self.current+=1
