@@ -11,6 +11,7 @@ import math
 sg.theme('DarkAmber') #設定顏色主題
 sg.set_options(auto_size_buttons=True)
 
+
 #全域變數
 this_Year = datetime.today().year #獲取今年年份
 this_month = datetime.today().month #獲取這個月份
@@ -95,7 +96,7 @@ def reset_csv():#重建csv檔
     user_df=local_csvdf
     user_Coid_CSV_List=user_df.values.tolist()
     sg.popup('已建立本地股號表。')
-    sg.Print('重建本地股號表')
+    #sg.Print('重建本地股號表')
 
 def check_setting():#檢查設定
     if(path.exists(profile_PATH+_file_name_setting_ini)):
@@ -128,15 +129,35 @@ check_local_csv()
 #爬蟲調用
 
 scrapyer = Scraper()
-
+def call_Price_Spider(isLocal,LOAD_CSVPATH):
+    global csvpath
+    info=''
+    if(isLocal):
+        scrapyer.set_PriceSpider(csvpath)
+        Force_Exit_Window=set_Force_Exit()
+        main_Window.close()
+        scrapyer.run_PriceSpider()
+    else:
+        scrapyer.set_PriceSpider(LOAD_CSVPATH)
+        Force_Exit_Window=set_Force_Exit()
+        main_Window.close()
+        scrapyer.run_PriceSpider()
+    print('\n')
+    sg.popup_ok('抓取股價資料完成！程式將會關閉！')
+    os._exit(0)
 def call_Stock_Spider(isAutoMode,isLocal,LOAD_CSVPATH,M_CO_ID):
     global csvpath
+    info=''
     if(isAutoMode):
         if(isLocal):
             scrapyer.set_StockSpider(Year=search_Year,Season=search_Season,Mode='Auto',CSV=csvpath)
+            Force_Exit=set_Force_Exit()
+            main_Window.close()
             scrapyer.run_StockSpider()
         else:
             scrapyer.set_StockSpider(Year=search_Year,Season=search_Season,Mode='Auto',CSV=LOAD_CSVPATH)
+            Force_Exit=set_Force_Exit()
+            main_Window.close()
             scrapyer.run_StockSpider()
     else:
         scrapyer.set_StockSpider(Year=search_Year,Season=search_Season,Mode='Manual',CO_ID=M_CO_ID)
@@ -175,7 +196,7 @@ def local_CSV_Row_Add(co_ID,co_Name): #新增資料
 def filter_Local_CSV_Table(filter_String): #資料過濾
     global user_Coid_CSV_List,filter_Coid_CSV_List,local_Csv_Window
     filter_String=str(filter_String)
-    sg.Print(filter_String)
+    #sg.Print(filter_String)
     filter_Coid_CSV_List=[]
     if(filter_String.isnumeric()):
         filter_Coid_CSV_List=filter(lambda x:filter_String in x[0] or filter_String in x[1],user_Coid_CSV_List)
@@ -319,6 +340,11 @@ def local_CSV_Import_usercsvfile(): #選擇外部股號表檔案
 
 #視窗設計
 
+def set_Force_Exit():
+    Force_Exit_Layout=[
+        [sg.Text('爬蟲運行中...')],
+    ]
+    return sg.Window("動作中...",Force_Exit_Layout,margins=(20,10),finalize=True,modal=True,disable_close=True,disable_minimize=True)
 def set_local_CSV_Remove_Row(coid,coname):#編輯本地股號表 -> 刪除單筆資料
     Remove_Row_Layout = [
         [sg.Text(f'刪除 {coid} {coname} ？')],
@@ -389,7 +415,8 @@ def set_Main_Window(): #主視窗
                 [sg.Text('[資料庫]')],
                 [sg.Text('存取資料庫'),sg.Button('連接資料庫')],
                 [sg.Text('[網路爬蟲]')],
-                [sg.Text('財務報告爬取'),sg.Button('啟用爬取程式')],
+                [sg.Text('財務報告爬取'),sg.Button('開始爬取財務報告')],
+                [sg.Text('股價資料爬取'),sg.Button('開始爬取股價資料')],
                 [sg.Text('[運行計算式]')],
                 [sg.Button('公式一'),sg.Button('公式二'),sg.Button('公式三'),sg.Button('公式四')],
                 [sg.Text('其他選項')],
@@ -432,19 +459,21 @@ def set_Setting_Window(): #主視窗 -> 設定
 
 main_Window,setting_Window,aM_Window,local_Csv_Window,local_Csv_imode_Window = set_Main_Window(),None,None,None,None
 csv_Row_Edit_Window,csv_Row_Add_Window=None,None
-Spider_Stock_Select_Mode_Window=None
+Spider_Stock_Select_Mode_Window,Spider_Stock_Price_Window=None,None
 auto_Spider_Stock_Window,manual_Spider_Stock_Window=None,None
-
+Force_Exit_Window=None
 print('主視窗載入完成。')
 
 while True: #監控視窗回傳
     window,event, values = sg.read_all_windows()
-    sg.Print(f'Window:{window},event:{event},values:{values}')
+    #sg.Print(f'Window:{window},event:{event},values:{values}')
     if window == main_Window: #主視窗
-        window.bring_to_front()
         if event in (sg.WIN_CLOSED,'離開'):
             break
-        if event == "啟用爬取程式":
+        if event == "開始爬取股價資料":
+            sg.popup('由於Scrapy框架的天生限制。\n在執行完一個爬蟲之後程式將會自動關閉，手動開啟後得以進行下一個爬蟲作業。',title='注意')
+            Spider_Stock_Price_Window=set_AutoMode_Window()
+        if event == "開始爬取財務報告":
             sg.popup('由於Scrapy框架的天生限制。\n在執行完一個爬蟲之後程式將會自動關閉，手動開啟後得以進行下一個爬蟲作業。',title='注意')
             Spider_Stock_Select_Mode_Window=set_Spider_Stock_Select_Mode_Window()
 
@@ -493,7 +522,27 @@ while True: #監控視窗回傳
         if event == "開啟設定目錄":
             os.startfile(profile_PATH)
     
-    if window == aM_Window: #主視窗 -> 自動抓取 -> 選擇來源
+    if window == Spider_Stock_Price_Window: #主視窗 -> 股價爬蟲 -> 選擇來源
+        window.bring_to_front()
+        if event in (sg.WIN_CLOSED,'取消'):
+            window.close()
+            Spider_Stock_Price_Window=None
+        if event =='確定':
+            if(values['_loadFromLocal']):
+                window.close()
+                Spider_Stock_Price_Window=None
+                call_Price_Spider(True,'')
+            else:
+                custom_Price_Spider_CSVPATH = sg.popup_get_file('讀入外部股號表',no_window=True,file_types=(("外部CSV股號表","*.csv"),))
+                if(custom_Price_Spider_CSVPATH!=''):
+                    window.close()
+                    Spider_Stock_Price_Window=None
+                    call_Price_Spider(False,custom_Price_Spider_CSVPATH)
+                else:
+                    window.close()
+                    Spider_Stock_Price_Window=None
+    
+    if window == aM_Window: #主視窗 -> 財務批次爬蟲 -> 選擇來源
         window.bring_to_front()
         if event in (sg.WIN_CLOSED,'取消'):
             window.close()
@@ -551,7 +600,7 @@ while True: #監控視窗回傳
         if event == 'filter_data':
             if(values['filter_data'] == ''):
                 local_Coid_CSV_is_filter=False
-                sg.Print('Null')
+                #sg.Print('Null')
                 refresh_Local_CSV_Table()
             else:
                 local_Coid_CSV_is_filter=True
@@ -625,10 +674,8 @@ while True: #監控視窗回傳
                 window['_StartSearchSeason'].update(values=this_year_season_List,set_to_index=0)
         if event == '確定':
             window.close()
-            search_Year.append(int(values['_StartSearchYear']))
-            search_Year.append(int(values['_LastSearchYear']))
-            search_Season.append(int(values['_StartSearchSeason']))
-            search_Season.append(int(values['_LastSearchSeason']))
+            search_Year = str(values['_StartSearchYear'])
+            search_Season = str(values['_StartSearchSeason'])
             auto_Spider_Stock_Window=None
             aM_Window=set_AutoMode_Window()
         if event == '返回':
