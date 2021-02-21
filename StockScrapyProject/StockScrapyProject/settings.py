@@ -93,4 +93,5 @@ AUTOTHROTTLE_DEBUG = False
 
 MONGO_URI = 'mongodb://localhost:27017'
 MONGO_DATABASE = 'theStockDB'
+MONGO_CODATA ='theStockData'
 FEED_EXPORT_ENCODING = 'utf-8'
