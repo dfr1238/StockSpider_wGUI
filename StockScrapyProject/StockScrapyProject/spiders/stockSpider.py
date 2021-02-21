@@ -5,7 +5,6 @@ import urllib.parse as urlParse
 import PySimpleGUI as sg
 from urllib.parse import parse_qs
 import pandas as pd
-from scrapy import item
 from ..items import StockSpider_items
 from pydispatch import dispatcher
 from datetime import datetime
@@ -48,7 +47,7 @@ class StockSpider(scrapy.Spider):
             title="正常運算當中"
             logging.info("正常運算當中")
         self.info=(f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl}\n目前筆數:{self.current},確認存在股數:{self.exist}\n確認未存在股號數:{len(self.noExist)},待導入A類查尋筆數:{self.wait_url_A}")
-        if(self.current%15==0):
+        if(self.current%15==0 or self.current == 1):
             sg.SystemTray.notify(title,self.info)
         logging.info(self.info)
         print("\n未存在股號列表：")
@@ -73,7 +72,7 @@ class StockSpider(scrapy.Spider):
             df = pd.DataFrame(dict)
             filename=f'.\{dt_string}-財務報告-未存在股號.csv'
             df.to_csv(filename, index=False)
-            logging.info(f'已匯出未存在的股號至{filename}')
+            sg.SystemTray.notify(f'已匯出未存在的股號至\n{filename}')
         else:
             logging.info('無缺漏股號。')
 
@@ -87,12 +86,12 @@ class StockSpider(scrapy.Spider):
         self.Season=Season #帶入參數季度 -a Season 數字字串
         self.Mode=Mode #帶入爬蟲模式 -a Mode 文字字串，Auto與Manual模式
         if(Mode=='Auto' or Mode=='A'):
-            sg.SystemTray.notify('初始化','以批次模式進行中...')
+            sg.SystemTray.notify('財務報告爬蟲－初始化','以批次模式進行中...')
             logging.info(f'目前輸入的參數，年份：{Year}、季度{Season}、模式：{Mode}、CSV路徑:{CSV}')
             self.import_csv=CSV #匯入CSV之路徑 -a CSV 'Path'
             self.auto_Mode()
         elif (Mode=='Manual' or Mode=='M'):
-            sg.SystemTray.notify('初始化','以單筆模式進行中...')
+            sg.SystemTray.notify('財務報告爬蟲－初始化','以單筆模式進行中...')
             logging.info(f'目前輸入的參數，年份：{Year}、季度{Season}、模式：{Mode}、股號:{CO_ID}')
             self.manual_Mode(CO_ID)
         else:
