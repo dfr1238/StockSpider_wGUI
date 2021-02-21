@@ -9,15 +9,16 @@ from itemadapter import ItemAdapter
 import pymongo
 
 class MongoPipeline:
-    collection_name = 'theStockData'
 
-    def __init__(self, mongo_uri, mongo_db):
+    def __init__(self, mongo_uri, mongo_db,collection_name):
+        self.collection_name=collection_name
         self.mongo_uri = mongo_uri
         self.mongo_db = mongo_db
 
     @classmethod
     def from_crawler(cls, crawler):
         return cls(
+            collection_name = crawler.settings.get('MONGO_CODATA'),
             mongo_uri=crawler.settings.get('MONGO_URI'),
             mongo_db=crawler.settings.get('MONGO_DATABASE', 'items')
         )
