@@ -16,6 +16,16 @@ class Scraper:
         self.spider = StockSpider # The spider you want to crawl
         self.runner  = CrawlerRunner(get_project_settings())
     dfs = set()
+
+    def set_PriceSpider(self,CSV=''):
+        runner =CrawlerRunner(get_project_settings())
+        d = runner.crawl(stockPriceSpider,CSV_File_PATH=CSV)
+        self.dfs.add(d)
+        defer.DeferredList(self.dfs).addBoth(lambda _: reactor.stop())
+    
+    def run_PriceSpider(self):
+        reactor.run()
+
     def set_StockSpider(self,Year='',Season='',CSV='',Mode='',CO_ID='', **kwargs):
         runner  = CrawlerRunner(get_project_settings())
         d = runner.crawl(self.spider,Year=Year,Season=Season,CSV=CSV,Mode=Mode,CO_ID=CO_ID)
