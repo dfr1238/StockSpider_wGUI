@@ -2,7 +2,6 @@ from StockScrapyProject.StockScrapyProject.spiders.stockSpider import StockSpide
 from StockScrapyProject.StockScrapyProject.spiders.stockPriceSpider import stockPriceSpider
 from scrapy.crawler import CrawlerProcess, CrawlerRunner
 from scrapy.utils.project import get_project_settings
-from twisted.internet import reactor
 import os
 
 

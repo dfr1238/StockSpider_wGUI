@@ -1,4 +1,3 @@
-from typing import Counter
 import scrapy
 from scrapy import signals
 import csv

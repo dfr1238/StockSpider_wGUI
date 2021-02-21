@@ -1,6 +1,5 @@
 import os.path as path
 import os
-from typing import Dict
 import PySimpleGUI as sg
 import configparser
 import pandas as pd
