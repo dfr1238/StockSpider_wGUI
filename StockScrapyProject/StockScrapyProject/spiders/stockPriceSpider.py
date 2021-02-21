@@ -65,7 +65,7 @@ class stockPriceSpider(scrapy.Spider):
             self.noExist = list(filter(None, self.noExist))
             dict ={'代號' : self.noExist}
             df = pd.DataFrame(dict)
-            filename=f'..\{dt_string}-股價資料-未存在股號.csv'
+            filename=f'.\{dt_string}-股價資料-未存在股號.csv'
             df.to_csv(filename, index=False)
             print(f'已匯出未存在的股號至{filename}')
         else:
