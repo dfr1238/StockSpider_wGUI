@@ -20,7 +20,7 @@ USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit/536.5 (
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 8
+CONCURRENT_REQUESTS = 16
 
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
@@ -28,10 +28,10 @@ CONCURRENT_REQUESTS = 8
 DOWNLOAD_DELAY = 3.4
 RANDOMIZE_DOWNLOAD_DELAY = False
 # The download delay setting will honor only one of:
-CONCURRENT_REQUESTS_PER_DOMAIN = 1
+#CONCURRENT_REQUESTS_PER_DOMAIN = 1
 #CONCURRENT_REQUESTS_PER_IP = 16
 
-RETRY_TIMES = 15
+RETRY_TIMES = 6
 
 # Disable cookies (enabled by default)
 #COOKIES_ENABLED = False
@@ -74,14 +74,14 @@ ITEM_PIPELINES = {
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
 #AUTOTHROTTLE_ENABLED = True
 # The initial download delay
-AUTOTHROTTLE_START_DELAY = 10
+#AUTOTHROTTLE_START_DELAY = 10
 # The maximum download delay to be set in case of high latencies
-AUTOTHROTTLE_MAX_DELAY = 120
+#AUTOTHROTTLE_MAX_DELAY = 120
 # The average number of requests Scrapy should be sending in parallel to
 # each remote server
-AUTOTHROTTLE_TARGET_CONCURRENCY = 1.3
+#AUTOTHROTTLE_TARGET_CONCURRENCY = 1.3
 # Enable showing throttling stats for every response received:
-AUTOTHROTTLE_DEBUG = False
+#AUTOTHROTTLE_DEBUG = False
 
 # Enable and configure HTTP caching (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
