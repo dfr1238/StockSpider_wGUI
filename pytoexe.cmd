@@ -1,1 +1,1 @@
-pyinstaller --clean --win-private-assemblies -F .\stock_gui.spec
+pyinstaller --clean --win-private-assemblies -F -D .\stock_gui.spec --upx-dir=.\upx-3.96-win64 --icon=favico.ico
