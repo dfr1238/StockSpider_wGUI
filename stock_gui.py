@@ -101,7 +101,7 @@ def set_MONOGO_List(title, check_list, inputName):
     DB_List_Layout = [
         [sg.Text('請選擇要使用的項目')],
         [sg.Combo(check_list, default_value=List_Value,
-                  k='MList', readonly=True, size=(12, 1))],
+                  k='MList', readonly=True, size=(25, 1))],
         [sg.Text('欄位空白將會視為新建')],
         [sg.Button('新建'), sg.Button('刪除', disabled=disable_delete),
          sg.Text('\t\t'), sg.Button('確定'), sg.Button('取消')],
@@ -159,11 +159,10 @@ def connect_Mongo(isInit, isCreateNewDB, isCreateCODATA, isNeedSelect):
                     set_DB_Window.close()
                     set_DB_Window = None
                     return None
-                    break
 
                 if events == '刪除' and values['MList'] != '':
                     Button = sg.popup_yes_no(
-                        '確定要刪除 '+values['MList']+' 資料庫嗎？', no_titlebar=True)
+                        '確定要刪除 '+values['MList']+' 資料庫嗎？ 該動作無法復原。', no_titlebar=True)
                     if(Button == 'Yes'):
                         DBClient.drop_database(values['MList'])
                         DB_LIST = DBClient.list_database_names()
@@ -172,7 +171,7 @@ def connect_Mongo(isInit, isCreateNewDB, isCreateCODATA, isNeedSelect):
                         DB_LIST.remove('admin')
                         set_DB_Window['MList'].update(values=DB_LIST, value='')
                 if events == '新建':
-                    MongoDBName = '#'
+                    MongoDBName = ''
                     CreateNewDB = True
                     break
             set_DB_Window.close()
@@ -197,36 +196,39 @@ def connect_Mongo(isInit, isCreateNewDB, isCreateCODATA, isNeedSelect):
                 while True:
                     events, values = set_DB_Window.read()
 
+                    if events == '確定':
+                        MongoDB_CODATA = values['MList']
+                        print(MongoDB_CODATA)
+                        if(MongoDB_CODATA != ''):
+                            CreateCODATA = False
+                            break
+                        else:
+                            CreateCODATA = True
+                            break
+                    
                     if events == '取消':
                         set_DB_Window.close()
                         set_DB_Window = None
                         return None
 
-                    if events == '確定':
-                        MongoDB_CODATA = values['MList']
-                        if(MongoDB_CODATA != ''):
-                            CreateCODATA = False
-                            breakpoint
-                        else:
-                            CreateCODATA = True
-                            break
                     if events == '刪除' and values['MList'] != '':
+                        CODATA_COUNT=len(CODATA_LIST)
                         Button = sg.popup_yes_no(
-                            f'確定要刪除 '+values['MList']+' 資料集嗎？', no_titlebar=True)
+                            f'確定要刪除 '+values['MList']+f' 資料集嗎？\n該資料庫資料集數量為 {CODATA_COUNT}\n系統會自動刪除無資料集的資料庫', no_titlebar=True)
                         if(Button == 'Yes'):
                             db.drop_collection(values['MList'])
                             CODATA_LIST = db.list_collection_names()
                             set_DB_Window['MList'].update(
                                 values=CODATA_LIST, value='')
                     if events == '新建':
-                        MongoDB_CODATA = '#'
+                        MongoDB_CODATA = ''
                         CreateCODATA = True
                         break
                 set_DB_Window.close()
                 set_DB_Window = None
             print(MongoDB_CODATA)
 
-            if(MongoDB_CODATA in CODATA_LIST and (not CreateCODATA) or isNeedSelect):
+            if(MongoDB_CODATA in CODATA_LIST and (not CreateCODATA)):
                 DB_CODATA_Exist = True
                 DB_READY = DB_Connect_Status and DB_CODATA_Exist
                 conf.set('MongoDB', 'DBNAME', str(MongoDBName))
@@ -253,10 +255,10 @@ def connect_Mongo(isInit, isCreateNewDB, isCreateCODATA, isNeedSelect):
                                 sg.popup(f'在 {MongoDBName} 當中該資料集已存在！')
                                 setting_Window.make_modal()
                             db.drop_collection('init')
-                            connect_Mongo(True, False, False, False)
+                            check_Mongo()
                 else:
                     sg.popup(
-                        f'在 {MongoDBName} 之資料庫中找不到 {MongoDB_CODATA} 資料集，請到設定更改為有效的資料庫名稱。', no_titlebar=True)
+                        f'在 {MongoDBName} 之資料庫中找不到 {MongoDB_CODATA} 資料集，請到設定更改或建立有效的資料庫。', no_titlebar=True)
         else:
             DB_Connect_Status = False
             DB_CODATA_Exist = False
@@ -355,7 +357,7 @@ def check_local_csv():  # 檢查本地CSV
 scrapyer = Scraper()
 check_setting()
 check_local_csv()
-connect_Mongo(False, False, False, False)
+check_Mongo()
 
 # 爬蟲調用
 
@@ -732,7 +734,7 @@ def set_Local_CSV_Window():  # 主視窗 -> 編輯本地股號表
         [sg.Text(f'本地股號表CSV位於{csvpath}')]
     ]
     return sg.Window("編輯本地股號表", local_Coid_CSV_Layout, grab_anywhere=False, finalize=True, modal=True, disable_close=True, disable_minimize=True,
-                     force_toplevel=True)
+                     force_toplevel=True,no_titlebar=True)
 
 
 def set_Setting_Window():  # 主視窗 -> 設定
@@ -741,7 +743,7 @@ def set_Setting_Window():  # 主視窗 -> 設定
         [sg.Text('MongoDB －你絕大多數不用更動這個選項，此選項區是關於資料庫連接有關與存放爬取資料的相關設定。')],
         [sg.Text('MongoDB 連結－設定資料庫的位置與登入方法等')],
         [sg.Input(default_text=(conf['MongoDB']['MONGO_URI']),
-                  size=(30, 1), k='mDBUrI')],
+                  size=(60, 1), k='mDBUrI')],
         [sg.Text('MongoDB 資料庫 － 選擇要存取的資料庫')],
         [sg.Combo(DB_LIST, default_value=(conf['MongoDB']['DBNAME']), size=(
             30, 1), k='mDBName', readonly=True, enable_events=True)],
@@ -752,7 +754,7 @@ def set_Setting_Window():  # 主視窗 -> 設定
         [sg.Button('開啟設定目錄'), sg.Button('管理資料庫與資料集')]
     ]
 
-    return sg.Window("程式設定", setting_Layout, margins=(10, 5), finalize=True, modal=True, disable_close=True, disable_minimize=True)
+    return sg.Window("程式設定", setting_Layout, margins=(10, 5), finalize=True, modal=True, disable_close=True, disable_minimize=True,no_titlebar=True)
 
 
 main_Window, setting_Window, aM_Window, local_Csv_Window, local_Csv_imode_Window = set_Main_Window(
@@ -829,25 +831,48 @@ while True:  # 監控視窗回傳
                 value=codata_list[0], values=codata_list)
         if event == '管理資料庫與資料集':
             connect_Mongo(False, True, True, True)
-            window.close()
-            setting_Window = None
-            setting_Window = set_Setting_Window()
+            setting_Window.disable()
+            setting_Window.make_modal()
+            DB_LIST = DBClient.list_database_names()
+            DB_LIST.remove('local')
+            DB_LIST.remove('config')
+            DB_LIST.remove('admin')
+            db = DBClient.get_database(str(values['mDBName']))
+            #db = DBClient.get_database(str(conf.get('MongoDB', 'DBNAME')))
+            db.drop_collection('init')
+            CODATA_LIST = db.list_collection_names()
+
+            if(len(CODATA_LIST)==0):
+                mCDNAME_value=''
+            else:
+                mCDNAME_value=CODATA_LIST[len(CODATA_LIST)-1]
+
+            if(len(DB_LIST)==0):
+                mDBName_value=''
+            else:
+                mDBName_value=DB_LIST[len(DB_LIST)-1]
+
+            setting_Window['mCDName'].update(
+                value=mCDNAME_value, values=CODATA_LIST)
+            setting_Window['mDBName'].update(
+                value=mDBName_value, values=DB_LIST)
+            setting_Window.enable()
+            setting_Window.make_modal()
         if event == "保存":
             print("Save"+str(values['mDBUrI']),
                   str(values['mDBName']), str(values['mCDName']))
-            if(check_Mongo()):
+            conf.set('MongoDB', 'DBNAME', str(values['mDBName']))
+            conf.set('MongoDB', 'cdataname', str(values['mCDName']))
+            check_Mongo()
+            if(DB_READY):
                 conf.set('MongoDB', 'MONGO_URI', str(values['mDBUrI']))
-                conf.set('MongoDB', 'DBNAME', str(values['mDBName']))
-                conf.set('MongoDB', 'cdataname', str(values['mCDName']))
                 conf.write(open(cfgpath, 'w'))
-                check_Mongo()
                 sg.popup('已保存設定！', title='已保存')
                 scrapyer.change_Project_Setting(str(conf.get('MongoDB', 'MONGO_URI')), str(
-                    conf.get('MongoDB', 'DBNAME')), str(conf.get('MongoDB', 'cdataname')))
+                conf.get('MongoDB', 'DBNAME')), str(conf.get('MongoDB', 'cdataname')))
                 window.close()
                 setting_Window = None
             else:
-                setting_Window.bring_to_front()
                 setting_Window.make_modal()
 
         if event == "重置":
