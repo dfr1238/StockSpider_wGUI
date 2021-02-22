@@ -1,13 +1,14 @@
-import os.path as path
-import os
-import PySimpleGUI as sg
 import configparser
-import pandas as pd
+import math
+import os
+import os.path as path
 from datetime import datetime
 
-from StockScrapyProject.StockScrapyProject.run_scraper import Scraper
-import math
+import pandas as pd
 import pymongo
+import PySimpleGUI as sg
+
+from StockScrapyProject.StockScrapyProject.run_scraper import Scraper
 
 sg.theme('DarkAmber')  # 設定顏色主題
 sg.set_options(auto_size_buttons=True)
