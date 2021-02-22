@@ -1,14 +1,15 @@
 import configparser
-from math import ceil as math_ceil
 import os
 import os.path as path
+import winsound
 from datetime import datetime
+from math import ceil as math_ceil
 
-from pandas import DataFrame
-from pandas import read_csv as pd_read_csv
-from pandas import errors as pd_errors
 import pymongo
 import PySimpleGUI as sg
+from pandas import DataFrame
+from pandas import errors as pd_errors
+from pandas import read_csv as pd_read_csv
 
 from StockScrapyProject.StockScrapyProject.run_scraper import Scraper
 
@@ -16,12 +17,16 @@ sg.theme('DarkAmber')  # 設定顏色主題
 sg.set_options(auto_size_buttons=True)
 
 
+formula_Info = ('A1=現金及約當現金\nA2=透過損益按公允價值衡量之金融資產－流動\nA3=透過其他綜合損益按公允價值衡量之金融資產－流動\nA4=按攤銷後成本衡量之金融資產－流動\nA5=避險之金融資產－流動\nA6=非流動負債合計\nA7=普通股股本\nB1=營業收入合計\nB2=營業利益（損失）\nB3=營業外收入及支出合計\nB4=稀釋每股盈餘合計(EPS)\nPrice=收盤價')
+
 # 全域變數
 this_Year = datetime.today().year  # 獲取今年年份
 this_month = datetime.today().month  # 獲取這個月份
 this_season = math_ceil(this_month/4)  # 換算季度
 year_List = []  # 存放年份
 season_List = ['1', '2', '3', '4']  # 存放季度
+month_List = ['1', '2', '3', '4', '5', '6',
+              '7', '8', '9', '10', '11', '12']  # 存放月份
 this_year_season_List = []
 
 DBClient = pymongo.MongoClient()
@@ -161,6 +166,7 @@ def connect_Mongo(isInit, isCreateNewDB, isCreateCODATA, isNeedSelect):
                     return None
 
                 if events == '刪除' and values['MList'] != '':
+                    winsound.MessageBeep(winsound.MB_ICONQUESTION)
                     Button = sg.popup_yes_no(
                         '確定要刪除 '+values['MList']+' 資料庫嗎？ 該動作無法復原。', no_titlebar=True)
                     if(Button == 'Yes'):
@@ -205,14 +211,15 @@ def connect_Mongo(isInit, isCreateNewDB, isCreateCODATA, isNeedSelect):
                         else:
                             CreateCODATA = True
                             break
-                    
+
                     if events == '取消':
                         set_DB_Window.close()
                         set_DB_Window = None
                         return None
 
                     if events == '刪除' and values['MList'] != '':
-                        CODATA_COUNT=len(CODATA_LIST)
+                        CODATA_COUNT = len(CODATA_LIST)
+                        winsound.MessageBeep(winsound.MB_ICONQUESTION)
                         Button = sg.popup_yes_no(
                             f'確定要刪除 '+values['MList']+f' 資料集嗎？\n該資料庫資料集數量為 {CODATA_COUNT}\n系統會自動刪除無資料集的資料庫', no_titlebar=True)
                         if(Button == 'Yes'):
@@ -235,10 +242,11 @@ def connect_Mongo(isInit, isCreateNewDB, isCreateCODATA, isNeedSelect):
                 conf.set('MongoDB', 'CDATANAME', str(MongoDB_CODATA))
                 conf.write(open(cfgpath, 'w'))
                 sg.SystemTray.notify(
-                    'MonogoDB 已預備完成！', f'資料庫: {MongoDBName} \n資料集: {MongoDB_CODATA}\n功能初始化完成', display_duration_in_ms=1000, fade_in_duration=.2)
+                    'MonogoDB 已預備完成！', f'資料庫: {MongoDBName} \n資料集: {MongoDB_CODATA}\n功能初始化完成', display_duration_in_ms=300, fade_in_duration=.2)
             else:
                 if(isInit or CreateCODATA):
                     if(not CreateCODATA and not isInit):
+                        winsound.MessageBeep(winsound.MB_ICONQUESTION)
                         if(sg.popup_yes_no(f'在 {MongoDBName} 之資料庫中找不到 {MongoDB_CODATA} 資料集，是否創建新的資料集？', no_titlebar=True) == 'Yes'):
                             NewCOName = sg.popup_get_text(
                                 message='輸入資料集的名稱', default_text=default_MDCDNAME)
@@ -252,7 +260,8 @@ def connect_Mongo(isInit, isCreateNewDB, isCreateCODATA, isNeedSelect):
                                 conf.set('MongoDB', 'CDATANAME', NewCOName)
 
                             except pymongo.errors.CollectionInvalid:
-                                sg.popup(f'在 {MongoDBName} 當中該資料集已存在！')
+                                winsound.MessageBeep(winsound.MB_ICONHAND)
+                                sg.popup_error(f'在 {MongoDBName} 當中該資料集已存在！')
                                 setting_Window.make_modal()
                             db.drop_collection('init')
                             check_Mongo()
@@ -314,7 +323,7 @@ def reset_csv():  # 重建csv檔
     user_df = local_csvdf
     user_Coid_CSV_List = user_df.values.tolist()
     sg.SystemTray.notify(
-        '系統', '已建立本地股號表。', display_duration_in_ms=1000, fade_in_duration=.2)
+        '系統', '已建立本地股號表。', display_duration_in_ms=250, fade_in_duration=.2)
     # sg.Print('重建本地股號表')
 
 
@@ -324,6 +333,7 @@ def check_setting():  # 檢查設定
             '系統', '已檢查到設定檔。', display_duration_in_ms=250, fade_in_duration=.2)
         conf.read(cfgpath, encoding='utf-8')
         if(not conf.has_option('MongoDB', 'mongo_uri') or not conf.has_option('MongoDB', 'dbname') or not conf.has_option('MongoDB', 'cdataname')):
+            winsound.MessageBeep(winsound.MB_ICONHAND)
             sg.popup_error('系統', '資料庫相關設置遺失！重置設定檔中...')
             reset_setting()
     else:
@@ -344,7 +354,8 @@ def check_local_csv():  # 檢查本地CSV
             user_Coid_CSV_List = local_csvdf.values.tolist()
             user_df = local_csvdf
         except pd_errors.EmptyDataError:
-            sg.popup('讀取本地股號表時發生錯誤！重建本地股號表...')
+            winsound.MessageBeep(winsound.MB_ICONHAND)
+            sg.popup_error('讀取本地股號表時發生錯誤！重建本地股號表...')
             reset_csv()
             check_local_csv()
     else:
@@ -380,6 +391,7 @@ def call_Price_Spider(isLocal, LOAD_CSVPATH):
         Force_Exit_Window = set_Force_Exit()
         scrapyer.run_PriceSpider()
     print('\n')
+    winsound.MessageBeep(type=winsound.MB_OK)
     sg.popup_ok('抓取股價資料完成！程式將會關閉！')
     os._exit(0)
 
@@ -409,6 +421,7 @@ def call_Stock_Spider(isAutoMode, isLocal, LOAD_CSVPATH, M_CO_ID):
             Year=search_Year, Season=search_Season, Mode='Manual', CO_ID=M_CO_ID)
         scrapyer.run_StockSpider()
     print('\n')
+    winsound.MessageBeep(type=winsound.MB_OK)
     sg.popup_ok('抓取股票財務報告完成！程式將會關閉！')
     os._exit(0)
 
@@ -590,15 +603,15 @@ def local_CSV_Import_usercsvfile():  # 選擇外部股號表檔案
             event, values = local_Csv_imode_Window.read()
             if event == "確定":
                 if(values['ucMode_Replace'] == True):
+                    winsound.MessageBeep(winsound.MB_ICONQUESTION)
                     Button = sg.popup_ok_cancel('取代目前已有的股號表，確定嗎？')
                     if(Button == "OK"):
-                        sg.popup("使用取代模式")
                         local_CSV_usercsvfile_import(True, user_CSV_File_Path)
                         break
                 else:
+                    winsound.MessageBeep(winsound.MB_ICONQUESTION)
                     Button = sg.popup_ok_cancel('添加至目前已有的股號表，確定嗎？')
                     if(Button == "OK"):
-                        sg.popup("使用增加模式")
                         local_CSV_usercsvfile_import(False, user_CSV_File_Path)
                         break
             if event == "取消":
@@ -607,29 +620,86 @@ def local_CSV_Import_usercsvfile():  # 選擇外部股號表檔案
     local_Csv_imode_Window = None
     window.make_modal()
 
+# 資料庫管理物件
+
+
+class MongoDB_Load():
+    global DBClient, DB_LIST, CODATA_LIST, year_List, season_List
+    tableDF=[]
+    table_List = ['TEST', 'TEST', 'TEST']
+    table_Heading = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
+    year_filter_list = ['全部']
+    season_filter_list = ['全部']
+    year_filter_list += year_List
+    season_filter_list += season_List
+    mongoDB_DBName = ''
+    mongoDB_CData = ''
+    tableType = ''
+    db_Data_Newest_Year = ''
+    db_Data_Newest_Season = ''
+    displayDB_Layout = []
+
+    def clean_Data(self):
+        self.table_List.clear()
+        self.table_Heading.clear()
+        pass
+
+    def __init__(self) -> None:
+        self.mongoDB_DBName = conf.get('MongoDB', 'DBNAME')
+        self.mongoDB_CData = conf.get('MongoDB', 'CDATANAME')
+        pass
+
+    def update_Window(self):
+        displayDB_Window['display_Type'].update(value=self.tableType)
+        displayDB_Window['display_Table'].update(values=self.table_List)
+        displayDB_Window['Order_Data'].update(values=self.table_Heading)
+
+    def load_StockData(self):
+        self.tableType = '財務報告'
+        self.clean_Data()
+        db = DBClient[self.mongoDB_DBName]
+        codata = db[self.mongoDB_CData]
+        query_slot = {"_id": 0,"DATA_TYPE":0,"SUB_DATA_TYPE":0}
+        query = {"DATA_TYPE": "財務報告"}
+        temp_list=[]
+        heading_list=[]
+        for prt in codata.find(query, query_slot):
+            temp_list.append(prt)
+        
+        self.tableDF=DataFrame(temp_list)
+        self.tableDF=self.tableDF[['CO_ID','Syear','SSeason','CO_FULL_NAME','A1','A2','A3','A4','A5','A6','A7','B1','B2','B3','B4']]
+        self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","Syear":"年份","SSeason":"季度","CO_FULL_NAME":"公司全名"})
+        print(self.tableDF)
+        temp_list=self.tableDF.values.tolist()
+        heading_list=list(self.tableDF.head())
+        temp_list=self.tableDF[1:].values.tolist()
+        self.table_List=temp_list
+        self.table_Heading=heading_list
+        #self.update_Window()
+        # self.set_display_DB_Data()
+
+    def init_MongoDB(self):
+        self.mongoDB_DBName = conf.get('MongoDB', 'DBNAME')
+        self.mongoDB_CData = conf.get('MongoDB', 'CDATANAME')
+        self.load_StockData()
+
+    def set_display_DB_Data(self):
+        displayDB_Layout = [
+            [sg.Text('目前顯示'), sg.Text(self.tableType, k='display_Type')],
+            [sg.Table(values=self.table_List, auto_size_columns=False, def_col_width=15,
+                      headings=self.table_Heading, num_rows=50, select_mode="extended",
+                      enable_events=True, key='display_Table', bind_return_key=True, vertical_scroll_only=False)],
+            [sg.Text('過濾條件\t'), sg.Text('年份'), sg.Combo(self.year_filter_list, default_value='全部', k='Combo_Year', size=(6, 1)), sg.Text('季度'), sg.Combo(
+                self.season_filter_list, default_value='全部', k='Combo_Season', size=(6, 1)), sg.Text('股號'), sg.Input(k='Input_COID', size=(6, 1))],
+            [sg.Text('排序\t'), sg.Text('排列順序'), sg.Combo(['由大到小', '由小到大'], default_value='由大到小', k='Order_Type', size=(
+                10, 1)), sg.Text('排序基準'), sg.Combo(self.table_Heading, default_value='', k='Order_Data', size=(65, 1))],
+            [sg.Text('動作\t'), sg.Button('匯出'), sg.Button('關閉'),
+             sg.Button('讀取財務報告'), sg.Button('讀取股價資料')],
+        ]
+        return sg.Window("顯示資料庫資料", displayDB_Layout, resizable=True, margins=(5, 5), finalize=True, modal=True, element_justification="center")
+
+
 # 視窗設計
-
-def load_DB_Data():
-    table_List=['1','2','3']
-    table_Heading=['現金及約當現金','透過損益按公允價值衡量之金融資產－流動','透過其他綜合損益按公允價值衡量之金融資產－流動','按攤銷後成本衡量之金融資產－流動','避險之金融資產－流動','非流動負債合計','普通股股本','營業收入合計','營業利益（損失）','營業外收入及支出合計','稀釋每股盈餘合計']
-    year_filter_list=['全部']
-    season_filter_list=['全部']
-    year_filter_list+=year_List
-    season_filter_list+=season_List
-    return set_display_DB_Data(table_List,table_Heading,year_filter_list,season_filter_list)
-
-def set_display_DB_Data(import_List,import_List_Heading,year_filter_list,season_filter_list):
-    displayDB_Layout =[
-        [sg.Text('目前顯示'),sg.Text('股價資訊',k='display_Type')],
-        [sg.Table(values=import_List,auto_size_columns=False,
-        headings=import_List_Heading,num_rows=30,select_mode="browse",
-        enable_events=True,key='display_Table',bind_return_key=True,vertical_scroll_only=False)],
-        [sg.Text('過濾條件\t'),sg.Text('年份'),sg.Combo(year_filter_list,default_value='全部',k='Combo_Year',size=(6,1)),sg.Text('季度'),sg.Combo(season_filter_list,default_value='全部',k='Combo_Season',size=(6,1)),sg.Text('股號'),sg.Input(k='Input_COID',size=(6,1))],
-        [sg.Text('排序\t'),sg.Text('排列順序'),sg.Combo(['由大到小','由小到大'],default_value='由大到小',k='Order_Type',size=(10,1)),sg.Text('排序基準'),sg.Combo(import_List_Heading,default_value='',k='Order_Data',size=(65,1))],
-        [sg.Text('動作\t'),sg.Button('匯出'),sg.Button('關閉'),sg.Button('讀取財務報告'),sg.Button('讀取股價資料')],
-        [sg.Text('公式運算'),sg.Combo(['公式一','公式二','公式三','公式四'],default_value='公式一',k='Combo_Formula',size=(6,1)),sg.Text('公式詳情'),sg.Text('',k='Combo_Formula_Full'),sg.Button('計算')],
-    ]
-    return sg.Window("顯示資料庫資料",displayDB_Layout,resizable=True,margins=(10,10),finalize=True,modal=True,element_justification="center")
 
 def set_Force_Exit():
     Force_Exit_Layout = [
@@ -700,7 +770,7 @@ def set_manual_Spider_Stock_Window():  # 爬取模式 -> 單筆模式
 def set_auto_Spider_Stock_Window():  # 爬取模式 -> 多筆模式
     auto_Stock_Spider_Layout = [
         [sg.Text('年度與季度')],
-        [sg.Combo(year_List, size=(6, 5), key='_StartSearchYear', default_value=this_Year-1, enable_events=True, readonly=True), sg.Text('年'), sg.Combo(
+        [sg.Combo(year_List, size=(6, 5), key='_StartSearchYear', default_value=this_Year, enable_events=True, readonly=True), sg.Text('年'), sg.Combo(
             this_year_season_List, size=(2, 5), key='_StartSearchSeason', default_value=this_season, enable_events=True, readonly=True), sg.Text('季度')],
         [sg.Button('確定'), sg.Button('返回')]
     ]
@@ -726,8 +796,11 @@ def set_Main_Window():  # 主視窗
         [sg.Button('開始爬取財務報告', disabled=(not DB_READY))],
         [sg.Button('開始爬取股價資料', disabled=(not DB_READY))],
         [sg.Text('[運行計算式]')],
-        [sg.Button('公式一'), sg.Button('公式二'),
-         sg.Button('公式三'), sg.Button('公式四')],
+        [sg.Combo(['公式一', '公式二', '公式三', '公式四'],
+                  default_value='公式一', k='Combo_Formula', size=(8, 1), readonly=True, enable_events=True),
+         sg.Text('公式詳情'), sg.Text('[(A1+A2+A3+A4+A5)-A6] / (A7/10) - Price', k='Combo_Formula_Full', size=(65, 1))],
+        [sg.Button('計算', disabled=(not DB_READY)), sg.Button(
+            '查閱公式變數', disabled=(not DB_READY))],
         [sg.Text('其他選項')],
         [sg.Button('編輯本地股號表'), sg.Button('設定'), sg.Button(
             '離開'), sg.Button('關於'), sg.Button('說明')]
@@ -754,8 +827,8 @@ def set_Local_CSV_Window():  # 主視窗 -> 編輯本地股號表
         [sg.Button('匯入外部股號表'), sg.Button('重置本地股號表')],
         [sg.Text(f'本地股號表CSV位於{csvpath}')]
     ]
-    return sg.Window("編輯本地股號表", local_Coid_CSV_Layout, grab_anywhere=False, finalize=True, modal=True, disable_close=True, disable_minimize=True,
-                     force_toplevel=True,no_titlebar=True)
+    return sg.Window("編輯本地股號表", local_Coid_CSV_Layout, grab_anywhere=False, finalize=True, modal=True, disable_close=False, disable_minimize=False,
+                     force_toplevel=True, no_titlebar=False)
 
 
 def set_Setting_Window():  # 主視窗 -> 設定
@@ -764,7 +837,7 @@ def set_Setting_Window():  # 主視窗 -> 設定
         [sg.Text('MongoDB －你絕大多數不用更動這個選項，此選項區是關於資料庫連接有關與存放爬取資料的相關設定。')],
         [sg.Text('MongoDB 連結－設定資料庫的位置與登入方法等')],
         [sg.Input(default_text=(conf['MongoDB']['MONGO_URI']),
-                  size=(60, 1), k='mDBUrI')],
+                  size=(80, 1), k='mDBUrI')],
         [sg.Text('MongoDB 資料庫 － 選擇要存取的資料庫')],
         [sg.Combo(DB_LIST, default_value=(conf['MongoDB']['DBNAME']), size=(
             30, 1), k='mDBName', readonly=True, enable_events=True)],
@@ -775,8 +848,10 @@ def set_Setting_Window():  # 主視窗 -> 設定
         [sg.Button('開啟設定目錄'), sg.Button('管理資料庫與資料集')]
     ]
 
-    return sg.Window("程式設定", setting_Layout, margins=(10, 5), finalize=True, modal=True, disable_close=True, disable_minimize=True,no_titlebar=True)
+    return sg.Window("程式設定", setting_Layout, margins=(10, 5), finalize=True, modal=True, disable_close=True, disable_minimize=True, no_titlebar=True)
 
+
+MDB_Load = MongoDB_Load()
 
 main_Window, setting_Window, aM_Window, local_Csv_Window, local_Csv_imode_Window = set_Main_Window(
 ), None, None, None, None
@@ -796,22 +871,39 @@ while True:  # 監控視窗回傳
     window, event, values = sg.read_all_windows()
     # sg.Print(f'Window:{window},event:{event},values:{values}')
     if window == main_Window:  # 主視窗
+        if event == 'Combo_Formula':
+            if values['Combo_Formula'] == '公式一':
+                window['Combo_Formula_Full'].update(
+                    value="[ ( A1 + A2 + A3 + A4 + A5 ) - A6 ] / ( A7 / 10 ) - Price")
+            if values['Combo_Formula'] == '公式二':
+                window['Combo_Formula_Full'].update(
+                    value="｛( B4 - 去年同期的 B4 ) / ( 去年同期的 B4 ) ｝x 100 - Price / 近四季 EPS")
+            if values['Combo_Formula'] == '公式三':
+                window['Combo_Formula_Full'].update(
+                    value="｛( B2 - 去年同期 B2 ) / 去年同期 B2｝x 100 - Price / 近四季 EPS")
+            if values['Combo_Formula'] == '公式四':
+                window['Combo_Formula_Full'].update(
+                    value="( B2 - 去年同期 B2 ) > 1 or ( B3- 去年同期 B3 ) < 1")
         if event in (sg.WIN_CLOSED, '離開'):
             break
         if event == "開始爬取股價資料":
             if(check_Mongo()):
+                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                window.minimize()
                 sg.popup(
                     '由於Scrapy框架的天生限制。\n在執行完一個爬蟲之後程式將會自動關閉，手動開啟後得以進行下一個爬蟲作業。', title='注意')
                 Spider_Stock_Price_Window = set_AutoMode_Window()
         if event == "開始爬取財務報告":
             if(check_Mongo()):
+                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                window.minimize()
                 sg.popup(
                     '由於Scrapy框架的天生限制。\n在執行完一個爬蟲之後程式將會自動關閉，手動開啟後得以進行下一個爬蟲作業。', title='注意')
                 Spider_Stock_Select_Mode_Window = set_Spider_Stock_Select_Mode_Window()
         if event == "存取資料庫":
             if(check_Mongo()):
-                sg.popup('存取資料庫')
-                displayDB_Window=load_DB_Data()
+                MDB_Load.init_MongoDB()
+                displayDB_Window = MDB_Load.set_display_DB_Data()
 
         if event == "連接資料庫":
             window.close()
@@ -837,8 +929,18 @@ while True:  # 監控視窗回傳
             local_Csv_Window = set_Local_CSV_Window()
             load_Local_CSV_Table_CSVDF()
 
+        if event == "查閱公式變數":
+            sg.popup(formula_Info,'公式變數參考，你可以變更公式時移動視窗來參考。',no_titlebar=True,grab_anywhere=True,non_blocking=True)
         if event == "關於":
             sg.popup('股票資訊爬蟲\n版本： 1.0\n作者：Douggy Sans\n2021年編寫', title='關於')
+
+    if window == displayDB_Window:
+        if event in (sg.WIN_CLOSED, '關閉'):
+            displayDB_Window.close()
+            displayDB_Window = None
+
+        if event == "讀取財務報告":
+            MDB_Load.load_StockData()
 
     if window == setting_Window:  # 主視窗 -> 設定視窗之互動
         window.bring_to_front()
@@ -866,15 +968,15 @@ while True:  # 監控視窗回傳
             db.drop_collection('init')
             CODATA_LIST = db.list_collection_names()
 
-            if(len(CODATA_LIST)==0):
-                mCDNAME_value=''
+            if(len(CODATA_LIST) == 0):
+                mCDNAME_value = ''
             else:
-                mCDNAME_value=CODATA_LIST[len(CODATA_LIST)-1]
+                mCDNAME_value = CODATA_LIST[len(CODATA_LIST)-1]
 
-            if(len(DB_LIST)==0):
-                mDBName_value=''
+            if(len(DB_LIST) == 0):
+                mDBName_value = ''
             else:
-                mDBName_value=DB_LIST[len(DB_LIST)-1]
+                mDBName_value = DB_LIST[len(DB_LIST)-1]
 
             setting_Window['mCDName'].update(
                 value=mCDNAME_value, values=CODATA_LIST)
@@ -891,17 +993,20 @@ while True:  # 監控視窗回傳
             if(DB_READY):
                 conf.set('MongoDB', 'MONGO_URI', str(values['mDBUrI']))
                 conf.write(open(cfgpath, 'w'))
+                winsound.MessageBeep(winsound.MB_ICONASTERISK)
                 sg.popup('已保存設定！', title='已保存')
                 scrapyer.change_Project_Setting(str(conf.get('MongoDB', 'MONGO_URI')), str(
-                conf.get('MongoDB', 'DBNAME')), str(conf.get('MongoDB', 'cdataname')))
+                    conf.get('MongoDB', 'DBNAME')), str(conf.get('MongoDB', 'cdataname')))
                 window.close()
                 setting_Window = None
             else:
                 setting_Window.make_modal()
 
         if event == "重置":
+            winsound.MessageBeep(winsound.MB_ICONQUESTION)
             if(sg.popup_ok_cancel('是否重置設定？', title='確認重置', modal=True) == 'OK'):
                 reset_setting()
+                winsound.MessageBeep(winsound.MB_ICONASTERISK)
                 sg.popup('已重置！')
                 window.close()
                 setting_Window = None
@@ -961,9 +1066,11 @@ while True:  # 監控視窗回傳
                 csv_Row_Add_Window = None
                 local_Csv_Window.make_modal()
             elif(co_id == co_name):
+                winsound.MessageBeep(winsound.MB_ICONHAND)
                 sg.popup_error('股號與公司名稱重複！')
                 window.make_modal()
             else:
+                winsound.MessageBeep(winsound.MB_ICONHAND)
                 sg.popup_error('負號與公司欄位請勿留空！')
                 window.make_modal()
 
@@ -995,13 +1102,13 @@ while True:  # 監控視窗回傳
                 local_Coid_CSV_is_filter = True
                 filter_String = values['filter_data']
                 filter_Local_CSV_Table(filter_String)
-        if event in ('保存當前變更'):
+        if event == '保存當前變更':
             save_Local_CSV()
-        if event in ('關閉且「不保存」變更'):
+        if event in ('關閉且「不保存」變更', sg.WIN_CLOSED):
             update_Local_CSV_Table()
             window.close()
             local_Csv_Window = None
-        if event in ('關閉且「保存」變更'):
+        if event == '關閉且「保存」變更':
             print(user_df)
             save_Local_CSV()
             backup_Coid_pd_df.clear()
@@ -1009,7 +1116,8 @@ while True:  # 監控視窗回傳
             local_Csv_Window = None
         if event == "重新整理":
             if(local_Coid_CSV_is_changed):
-                if(sg.popup_ok_cancel('你股號表尚未存檔，重新整理將會喪失變更的資料並還原修改前的樣子', title='重新整理', modal=True, no_titlebar=True) == 'OK'):
+                winsound.MessageBeep(winsound.MB_ICONQUESTION)
+                if(sg.popup_yes_no('你股號表尚未存檔，重新整理將會喪失變更的資料並還原修改前的樣子，確定嗎？', title='重新整理', modal=True, no_titlebar=True) == 'Yes'):
                     update_Local_CSV_Table()
             else:
                 update_Local_CSV_Table()
@@ -1017,9 +1125,11 @@ while True:  # 監控視窗回傳
         if event == "匯入外部股號表":
             local_CSV_Import_usercsvfile()
         if event == "重置本地股號表":
-            if(sg.popup_ok_cancel('是否重置股號表？', title='確認重置', modal=True) == 'OK'):
+            winsound.MessageBeep(winsound.MB_ICONQUESTION)
+            if(sg.popup_yes_no('是否重置股號表？', title='確認重置', modal=True) == 'Yes'):
                 local_CSV_Backup_USER_DF()
                 reset_Local_CSV_Table()
+                winsound.MessageBeep(winsound.MB_ICONASTERISK)
                 sg.popup('已重置！')
             window.make_modal()
         if event == "刪除":
@@ -1028,6 +1138,7 @@ while True:  # 監控視窗回傳
                 select_row = int(select_row[0])
                 local_CSV_Row_Edit(False, select_row)
             else:
+                winsound.MessageBeep(winsound.MB_ICONHAND)
                 sg.popup('請先選擇有效的項目進行來編輯')
             window.make_modal()
         if event == "編輯" or event == '_local_Coid_CSV_Table':
@@ -1036,6 +1147,7 @@ while True:  # 監控視窗回傳
                 select_row = int(select_row[0])
                 local_CSV_Row_Edit(True, select_row)
             else:
+                winsound.MessageBeep(winsound.MB_ICONHAND)
                 sg.popup('請先選擇有效的項目進行來編輯')
             window.make_modal()
 
