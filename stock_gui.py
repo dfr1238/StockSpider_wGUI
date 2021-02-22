@@ -263,6 +263,7 @@ def connect_Mongo(isInit,isCreateNewDB,isCreateCODATA,isNeedSelect):
         DB_CODATA_Exist=False
         DB_READY=DB_Connect_Status and DB_CODATA_Exist
         sg.popup_ok('MongoDB 連接失敗，請確定是否有安裝 MonogoDB\n或者 MongoDB 服務是否有運行中！',title='MonogoDB',no_titlebar=True)
+        return None
     
 def reset_setting():#重置設定
     if not os.path.exists(profile_PATH):
