@@ -4,13 +4,16 @@ import urllib.parse as urlParse
 from datetime import datetime
 from urllib.parse import parse_qs
 
+import winsound
+from PySimpleGUI.PySimpleGUI import PBar, Window
 from pandas import DataFrame
 import PySimpleGUI as sg
 import scrapy
 from pydispatch import dispatcher
 from scrapy import signals
-
+from scrapy.exceptions import CloseSpider
 from ..items import StockSpider_items
+
 
 
 class StockSpider(scrapy.Spider):
@@ -29,6 +32,7 @@ class StockSpider(scrapy.Spider):
     ready_crawl = 0
     exist = 0
     current = 1
+    not_mamual_cancel = True
     allowed_domains = ['mops.twse.com.tw']  # 允許網域
 
     def auto_Mode(self):  # 自動模式
@@ -52,6 +56,11 @@ class StockSpider(scrapy.Spider):
             logging.info("正常運算當中")
         self.info = (
             f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl}\n目前筆數:{self.current},確認存在股數:{self.exist}\n確認未存在股號數:{len(self.noExist)},待導入A類查尋筆數:{self.wait_url_A}")
+        self.not_mamual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.ready_crawl,'Stock','\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
+        if(not self.not_mamual_cancel and self.current < self.exist):
+            sg.popup('已手動取消！')
+            raise CloseSpider("使用者取消！")
+        
         if(self.current % 15 == 0 or self.current == 1):
             sg.SystemTray.notify(title, self.info)
         logging.info(self.info)
@@ -77,7 +86,7 @@ class StockSpider(scrapy.Spider):
             self.noExist = list(filter(None, self.noExist))
             dict = {'代號': self.noExist}
             df = DataFrame(dict)
-            filename = f'.\{dt_string}-財務報告-未存在股號.csv'
+            filename = f'.\{dt_string} -財務報告- {self.Year} 年第 {self.Season} 中未存在股號.csv'
             df.to_csv(filename, index=False)
             sg.SystemTray.notify(f'已匯出未存在的股號至\n{filename}')
         else:
@@ -85,6 +94,7 @@ class StockSpider(scrapy.Spider):
 
     def spider_closed(self, spider):  # 爬蟲關閉時的動作
         self.output_EmptyList_csv()
+        winsound.PlaySound("SystemQuestion",winsound.SND_ALIAS)
         sg.popup(self.info)
 
     def __init__(self, Year='', Season='', CSV='', Mode='', CO_ID='', **kwargs):  # 初始化動作

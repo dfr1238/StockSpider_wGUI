@@ -2,6 +2,7 @@ import csv
 import urllib.parse as urlParse
 from datetime import datetime
 
+import winsound
 from pandas import DataFrame
 import PySimpleGUI as sg
 import scrapy
@@ -106,6 +107,10 @@ class stockPriceSpider(scrapy.Spider):
 
     def spider_closed(self, spider):  # 爬蟲關閉時的動作
         self.output_EmptyList_csv()
+        if(self.is_TPEX_open and self.is_TWSE_open):
+            winsound.PlaySound("SystemAsterisk",winsound.SND_ALIAS)
+        else:
+            winsound.PlaySound("SystemQuestion",winsound.SND_ALIAS)
         sg.popup(self.se_status)
 
     def check_se_parse(self, response):
