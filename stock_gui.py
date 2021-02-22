@@ -609,6 +609,27 @@ def local_CSV_Import_usercsvfile():  # 選擇外部股號表檔案
 
 # 視窗設計
 
+def load_DB_Data():
+    table_List=['1','2','3']
+    table_Heading=['現金及約當現金','透過損益按公允價值衡量之金融資產－流動','透過其他綜合損益按公允價值衡量之金融資產－流動','按攤銷後成本衡量之金融資產－流動','避險之金融資產－流動','非流動負債合計','普通股股本','營業收入合計','營業利益（損失）','營業外收入及支出合計','稀釋每股盈餘合計']
+    year_filter_list=['全部']
+    season_filter_list=['全部']
+    year_filter_list+=year_List
+    season_filter_list+=season_List
+    return set_display_DB_Data(table_List,table_Heading,year_filter_list,season_filter_list)
+
+def set_display_DB_Data(import_List,import_List_Heading,year_filter_list,season_filter_list):
+    displayDB_Layout =[
+        [sg.Text('目前顯示'),sg.Text('股價資訊',k='display_Type')],
+        [sg.Table(values=import_List,auto_size_columns=False,
+        headings=import_List_Heading,num_rows=30,select_mode="browse",
+        enable_events=True,key='display_Table',bind_return_key=True,vertical_scroll_only=False)],
+        [sg.Text('過濾條件\t'),sg.Text('年份'),sg.Combo(year_filter_list,default_value='全部',k='Combo_Year',size=(6,1)),sg.Text('季度'),sg.Combo(season_filter_list,default_value='全部',k='Combo_Season',size=(6,1)),sg.Text('股號'),sg.Input(k='Input_COID',size=(6,1))],
+        [sg.Text('排序\t'),sg.Text('排列順序'),sg.Combo(['由大到小','由小到大'],default_value='由大到小',k='Order_Type',size=(10,1)),sg.Text('排序基準'),sg.Combo(import_List_Heading,default_value='',k='Order_Data',size=(65,1))],
+        [sg.Text('動作\t'),sg.Button('匯出'),sg.Button('關閉'),sg.Button('讀取財務報告'),sg.Button('讀取股價資料')],
+        [sg.Text('公式運算'),sg.Combo(['公式一','公式二','公式三','公式四'],default_value='公式一',k='Combo_Formula',size=(6,1)),sg.Text('公式詳情'),sg.Text('',k='Combo_Formula_Full'),sg.Button('計算')],
+    ]
+    return sg.Window("顯示資料庫資料",displayDB_Layout,resizable=True,margins=(10,10),finalize=True,modal=True,element_justification="center")
 
 def set_Force_Exit():
     Force_Exit_Layout = [
@@ -763,6 +784,8 @@ csv_Row_Edit_Window, csv_Row_Add_Window = None, None
 Spider_Stock_Select_Mode_Window, Spider_Stock_Price_Window = None, None
 auto_Spider_Stock_Window, manual_Spider_Stock_Window = None, None
 Force_Exit_Window = None
+displayDB_Window = None
+
 main_Window.bring_to_front()
 if(DB_READY):
     scrapyer.change_Project_Setting(str(conf.get('MongoDB', 'MONGO_URI')), str(
@@ -788,6 +811,7 @@ while True:  # 監控視窗回傳
         if event == "存取資料庫":
             if(check_Mongo()):
                 sg.popup('存取資料庫')
+                displayDB_Window=load_DB_Data()
 
         if event == "連接資料庫":
             window.close()
