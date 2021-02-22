@@ -96,7 +96,7 @@ def set_MONOGO_List(title,check_list,inputName):
         disable_delete=True
     DB_List_Layout =[
         [sg.Text('請選擇要使用的項目')],
-        [sg.Combo(check_list,default_value=List_Value,k='MList',readonly=True)],
+        [sg.Combo(check_list,default_value=List_Value,k='MList',readonly=True,size=(12,1))],
         [sg.Text('欄位空白將會視為新建')],
         [sg.Button('新建'),sg.Button('刪除',disabled=disable_delete),sg.Text('\t\t'),sg.Button('確定'),sg.Button('取消')],
     ]
@@ -187,7 +187,6 @@ def connect_Mongo(isInit,isCreateNewDB,isCreateCODATA,isNeedSelect):
                         set_DB_Window.close()
                         set_DB_Window=None
                         return None
-                        break
 
                     if events =='確定':
                         MongoDB_CODATA = values['MList']
@@ -199,10 +198,10 @@ def connect_Mongo(isInit,isCreateNewDB,isCreateCODATA,isNeedSelect):
                             break
                     if events == '刪除' and values['MList']!='':
                         Button = sg.popup_yes_no(f'確定要刪除 '+values['MList']+' 資料集嗎？',no_titlebar=True)
-                    if(Button=='Yes'):
-                        db.drop_collection(values['MList'])
-                        CODATA_LIST=db.list_collection_names()
-                        set_DB_Window['MList'].update(values=CODATA_LIST,value='')
+                        if(Button=='Yes'):
+                            db.drop_collection(values['MList'])
+                            CODATA_LIST=db.list_collection_names()
+                            set_DB_Window['MList'].update(values=CODATA_LIST,value='')
                     if events =='新建':
                         MongoDB_CODATA = '#'
                         CreateCODATA=True
@@ -287,19 +286,19 @@ def reset_csv():#重建csv檔
 
 def check_setting():#檢查設定
     if(path.exists(profile_PATH+_file_name_setting_ini)):
-        sg.SystemTray.notify('系統','已檢查到設定檔。',display_duration_in_ms=500,fade_in_duration=.2)
+        sg.SystemTray.notify('系統','已檢查到設定檔。',display_duration_in_ms=250,fade_in_duration=.2)
         conf.read(cfgpath,encoding='utf-8')
         if(not conf.has_option('MongoDB','mongo_uri') or not conf.has_option('MongoDB','dbname') or not conf.has_option('MongoDB','cdataname')):
             sg.popup_error('系統','資料庫相關設置遺失！重置設定檔中...')
             reset_setting()
     else:
-        sg.SystemTray.notify('系統','未檢查到設定檔，創建中...',display_duration_in_ms=1000,fade_in_duration=.2)
+        sg.SystemTray.notify('系統','未檢查到設定檔，創建中...',display_duration_in_ms=5000,fade_in_duration=.2)
         reset_setting()
 
 def check_local_csv():#檢查本地CSV
     if(path.exists(profile_PATH+_file_name_local_csv)):
         global local_csvdf,user_Coid_CSV_List,user_df
-        sg.SystemTray.notify('系統','已檢查到本地股號表。',display_duration_in_ms=500,fade_in_duration=.2)
+        sg.SystemTray.notify('系統','已檢查到本地股號表。',display_duration_in_ms=250,fade_in_duration=.2)
         try:
             local_csvdf = pd.read_csv(csvpath, sep=',', engine='python',dtype=coid_dict_type,na_filter=False)
             local_csvdf = local_csvdf
