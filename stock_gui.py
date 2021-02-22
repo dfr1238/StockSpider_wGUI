@@ -664,7 +664,8 @@ Spider_Stock_Select_Mode_Window,Spider_Stock_Price_Window=None,None
 auto_Spider_Stock_Window,manual_Spider_Stock_Window=None,None
 Force_Exit_Window=None
 main_Window.bring_to_front()
-scrapyer.change_Project_Setting(str(conf.get('MongoDB','MONGO_URI')),str(conf.get('MongoDB','DBNAME')),str(conf.get('MongoDB','cdataname')))
+if(DB_READY):
+    scrapyer.change_Project_Setting(str(conf.get('MongoDB','MONGO_URI')),str(conf.get('MongoDB','DBNAME')),str(conf.get('MongoDB','cdataname')))
 
 print('主視窗載入完成。')
 while True: #監控視窗回傳
