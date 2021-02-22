@@ -2,7 +2,7 @@ import csv
 import urllib.parse as urlParse
 from datetime import datetime
 
-import pandas as pd
+from pandas import DataFrame
 import PySimpleGUI as sg
 import scrapy
 from pydispatch import dispatcher
@@ -69,7 +69,7 @@ class stockPriceSpider(scrapy.Spider):
         if(len(self.noExist)):
             self.noExist = list(filter(None, self.noExist))
             dict = {'代號': self.noExist}
-            df = pd.DataFrame(dict)
+            df = DataFrame(dict)
             filename = f'.\{dt_string}-股價資料-未存在股號.csv'
             df.to_csv(filename, index=False)
             print(f'已匯出未存在的股號至{filename}')

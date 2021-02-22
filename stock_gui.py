@@ -1,10 +1,12 @@
 import configparser
-import math
+from math import ceil as math_ceil
 import os
 import os.path as path
 from datetime import datetime
 
-import pandas as pd
+from pandas import DataFrame
+from pandas import read_csv as pd_read_csv
+from pandas import errors as pd_errors
 import pymongo
 import PySimpleGUI as sg
 
@@ -17,7 +19,7 @@ sg.set_options(auto_size_buttons=True)
 # 全域變數
 this_Year = datetime.today().year  # 獲取今年年份
 this_month = datetime.today().month  # 獲取這個月份
-this_season = math.ceil(this_month/4)  # 換算季度
+this_season = math_ceil(this_month/4)  # 換算季度
 year_List = []  # 存放年份
 season_List = ['1', '2', '3', '4']  # 存放季度
 this_year_season_List = []
@@ -63,9 +65,9 @@ conf = configparser.ConfigParser()  # 創建設定檔對象
 # PD.DF設置
 coid_dict = {"代號": [], "名稱": []}  # 建立空的本地股號列表
 coid_dict_type = {'代號': 'string', '名稱': 'string'}  # 建立股號列表檔案類型
-local_csvdf = pd.DataFrame(coid_dict)  # 導入本地股號表pd使用
-user_df = pd.DataFrame(coid_dict)  # 建立暫存本地股號表pd使用
-import_csv_df = pd.DataFrame(coid_dict)  # 導入pd使用
+local_csvdf = DataFrame(coid_dict)  # 導入本地股號表pd使用
+user_df = DataFrame(coid_dict)  # 建立暫存本地股號表pd使用
+import_csv_df = DataFrame(coid_dict)  # 導入pd使用
 import_csv_df.astype("string")  # 設定資料類型為字串
 user_df.astype("string")  # 設定資料類型為字串
 local_csvdf.astype("string")  # 設定資料類型為字串
@@ -305,7 +307,7 @@ def reset_setting():  # 重置設定
 
 def reset_csv():  # 重建csv檔
     global user_Coid_CSV_List, local_csvdf, user_df
-    local_csvdf = pd.DataFrame(coid_dict)  # 導入本地股號表pd使用
+    local_csvdf = DataFrame(coid_dict)  # 導入本地股號表pd使用
     local_csvdf.to_csv(csvpath, index=False, sep=',')
     user_df = local_csvdf
     user_Coid_CSV_List = user_df.values.tolist()
@@ -334,12 +336,12 @@ def check_local_csv():  # 檢查本地CSV
         sg.SystemTray.notify('系統', '已檢查到本地股號表。',
                              display_duration_in_ms=250, fade_in_duration=.2)
         try:
-            local_csvdf = pd.read_csv(
+            local_csvdf = pd_read_csv(
                 csvpath, sep=',', engine='python', dtype=coid_dict_type, na_filter=False)
             local_csvdf = local_csvdf
             user_Coid_CSV_List = local_csvdf.values.tolist()
             user_df = local_csvdf
-        except pd.errors.EmptyDataError:
+        except pd_errors.EmptyDataError:
             sg.popup('讀取本地股號表時發生錯誤！重建本地股號表...')
             reset_csv()
             check_local_csv()
@@ -556,7 +558,7 @@ def local_CSV_Row_Edit(isEdit, index):  # 編輯本地股號表 ->編輯單筆�
 def local_CSV_usercsvfile_import(isReplace, csv_path):  # 匯入動作
     global user_Coid_CSV_List
     global local_Coid_CSV_is_changed, user_df, import_csv_df
-    import_csv_df = pd.read_csv(
+    import_csv_df = pd_read_csv(
         csv_path, sep=',', engine='python', dtype=coid_dict_type, na_filter=False)
     local_CSV_Backup_USER_DF()
     if(isReplace):  # 取代
