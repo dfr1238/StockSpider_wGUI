@@ -30,11 +30,6 @@ month_List = ['1', '2', '3', '4', '5', '6',
 this_year_season_List = []
 
 DBClient = pymongo.MongoClient()
-DB_Connect_Status = False
-DB_CODATA_Exist = False
-DB_READY = DB_Connect_Status and DB_CODATA_Exist
-DB_LIST = []
-CODATA_LIST = []
 
 search_Year = ''
 search_Season = ''
@@ -46,11 +41,16 @@ for i in range(1, this_season+1):
 user_Coid_CSV_List = []  # 暫存股號表存放
 filter_Coid_CSV_List = []  # 過濾用存放
 backup_Coid_pd_df = []  # 備份user的df
+DB_LIST = [] #存放資料庫列表
+CODATA_LIST = [] #存放資料集列表
 filter_String = ''  # 過濾字串
 
 # State
 local_Coid_CSV_is_filter = False  # 存放過濾狀態
 local_Coid_CSV_is_changed = False  # 存放資料異動狀態
+DB_Connect_Status = False #存放連線狀態
+DB_CODATA_Exist = False #存放資料集存在狀態
+DB_READY = DB_Connect_Status and DB_CODATA_Exist #存放資料庫預備狀態
 
 # 常數
 profile_PATH = os.getenv('APPDATA')+'\DSApps\StockSpider\\'  # 設定檔路徑
@@ -637,6 +637,10 @@ class MongoDB_Load():
     tableType = ''
     db_Data_Newest_Year = ''
     db_Data_Newest_Season = ''
+    StockDataDF=''
+    StockPriceDF=''
+    db=''
+    codata=''
     displayDB_Layout = []
 
     def clean_Data(self):
@@ -647,47 +651,76 @@ class MongoDB_Load():
     def __init__(self) -> None:
         self.mongoDB_DBName = conf.get('MongoDB', 'DBNAME')
         self.mongoDB_CData = conf.get('MongoDB', 'CDATANAME')
+        self.db = DBClient[self.mongoDB_DBName] #獲得現在資料庫
+        self.codata = self.db[self.mongoDB_CData] #獲得現在資料庫中哪個資料集
         pass
 
     def update_Window(self):
-        displayDB_Window['display_Type'].update(value=self.tableType)
-        displayDB_Window['display_Table'].update(values=self.table_List)
-        displayDB_Window['Order_Data'].update(values=self.table_Heading)
+        global displayDB_Window
+        self.update_TableData()
+        displayDB_Window.close()
+        displayDB_Window=None
+        displayDB_Window=self.set_display_DB_Data()
+        displayDB_Window.bring_to_front()
+
+    def update_TableData(self):
+        self.table_List=self.tableDF.values.tolist()
+        self.table_Heading=list(self.tableDF.head())
+
+    def load_StockPriceTable(self):
+        self.load_StockPriceData()
+        self.update_TableData()
+
+    def load_StockDataTable(self):
+        self.load_StockData()
+        self.update_TableData()
+
+    def load_StockPriceData(self):
+        self.tableType ='股價報告'
+        self.clean_Data()
+        query_slot = {"_id": 0,"DATA_TYPE":0,"SUB_DATA_TYPE":0} #過濾輸出query
+        query = {"DATA_TYPE": "股價資料"} #過濾搜尋query
+        self.load_from_DB(query,query_slot)
+        self.tableDF=self.tableDF[['CO_ID','Syear','SDate','CO_SHORT_NAME','Price']]
+        self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","Syear":"年份","SDate":"收盤日","CO_SHORT_NAME":"公司縮寫","Price":"收盤價"})
+        print(self.tableDF)
+        self.StockPriceDF==self.tableDF
+
+
+    def load_from_DB(self,query_slot,query):
+        temp_list=[]
+        for prt in self.codata.find(query, query_slot):
+            temp_list.append(prt)
+        self.tableDF=DataFrame(temp_list)
+
+    def load_MixData(self):
+        self.load_StockData()
+        self.load_StockPriceData()
+        
+        pass
 
     def load_StockData(self):
         self.tableType = '財務報告'
-        self.clean_Data()
-        db = DBClient[self.mongoDB_DBName]
-        codata = db[self.mongoDB_CData]
-        query_slot = {"_id": 0,"DATA_TYPE":0,"SUB_DATA_TYPE":0}
-        query = {"DATA_TYPE": "財務報告"}
-        temp_list=[]
-        heading_list=[]
-        for prt in codata.find(query, query_slot):
-            temp_list.append(prt)
-        
-        self.tableDF=DataFrame(temp_list)
+        self.clean_Data() #清空列表
+        query_slot = {"_id": 0,"DATA_TYPE":0,"SUB_DATA_TYPE":0} #過濾輸出query
+        query = {"DATA_TYPE": "財務報告"} #過濾搜尋query
+        self.load_from_DB(query,query_slot)
         self.tableDF=self.tableDF[['CO_ID','Syear','SSeason','CO_FULL_NAME','A1','A2','A3','A4','A5','A6','A7','B1','B2','B3','B4']]
         self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","Syear":"年份","SSeason":"季度","CO_FULL_NAME":"公司全名"})
         print(self.tableDF)
-        temp_list=self.tableDF.values.tolist()
-        heading_list=list(self.tableDF.head())
-        temp_list=self.tableDF[1:].values.tolist()
-        self.table_List=temp_list
-        self.table_Heading=heading_list
-        #self.update_Window()
-        # self.set_display_DB_Data()
+        self.StockDataDF=self.tableDF
+        
 
     def init_MongoDB(self):
         self.mongoDB_DBName = conf.get('MongoDB', 'DBNAME')
         self.mongoDB_CData = conf.get('MongoDB', 'CDATANAME')
-        self.load_StockData()
+        self.load_StockDataTable()
 
     def set_display_DB_Data(self):
         displayDB_Layout = [
             [sg.Text('目前顯示'), sg.Text(self.tableType, k='display_Type')],
             [sg.Table(values=self.table_List, auto_size_columns=False, def_col_width=15,
-                      headings=self.table_Heading, num_rows=50, select_mode="extended",
+                      headings=self.table_Heading, num_rows=min(30,len(self.table_List)), select_mode="extended",
                       enable_events=True, key='display_Table', bind_return_key=True, vertical_scroll_only=False)],
             [sg.Text('過濾條件\t'), sg.Text('年份'), sg.Combo(self.year_filter_list, default_value='全部', k='Combo_Year', size=(6, 1)), sg.Text('季度'), sg.Combo(
                 self.season_filter_list, default_value='全部', k='Combo_Season', size=(6, 1)), sg.Text('股號'), sg.Input(k='Input_COID', size=(6, 1))],
@@ -813,8 +846,7 @@ def set_Local_CSV_Window():  # 主視窗 -> 編輯本地股號表
         [sg.Text('輸入股號或公司名稱過濾'), sg.Input(size=(25, 1),
                                           k='filter_data', enable_events=True), sg.Button('清除過濾')],
         [sg.Text('（若輸入中文後列表沒更新，請輕按Shift。）')],
-        [sg.Button('復原', disabled=not(
-            local_Coid_CSV_is_changed), k='backup_btn')],
+        [sg.Button('復原', disabled=not(local_Coid_CSV_is_changed), k='backup_btn')],
         [sg.Table(values=user_Coid_CSV_List,
                   headings=['代號', '名稱'],
                   auto_size_columns=False,
@@ -889,19 +921,20 @@ while True:  # 監控視窗回傳
         if event == "開始爬取股價資料":
             if(check_Mongo()):
                 winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
-                window.minimize()
                 sg.popup(
                     '由於Scrapy框架的天生限制。\n在執行完一個爬蟲之後程式將會自動關閉，手動開啟後得以進行下一個爬蟲作業。', title='注意')
                 Spider_Stock_Price_Window = set_AutoMode_Window()
+                window.minimize()
         if event == "開始爬取財務報告":
             if(check_Mongo()):
                 winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
-                window.minimize()
                 sg.popup(
                     '由於Scrapy框架的天生限制。\n在執行完一個爬蟲之後程式將會自動關閉，手動開啟後得以進行下一個爬蟲作業。', title='注意')
                 Spider_Stock_Select_Mode_Window = set_Spider_Stock_Select_Mode_Window()
+                window.minimize()
         if event == "存取資料庫":
             if(check_Mongo()):
+                main_Window.minimize()
                 MDB_Load.init_MongoDB()
                 displayDB_Window = MDB_Load.set_display_DB_Data()
 
@@ -938,9 +971,11 @@ while True:  # 監控視窗回傳
         if event in (sg.WIN_CLOSED, '關閉'):
             displayDB_Window.close()
             displayDB_Window = None
+            main_Window.normal()
 
         if event == "讀取財務報告":
-            MDB_Load.load_StockData()
+            MDB_Load.load_StockDataTable()
+            MDB_Load.update_Window()
 
     if window == setting_Window:  # 主視窗 -> 設定視窗之互動
         window.bring_to_front()
