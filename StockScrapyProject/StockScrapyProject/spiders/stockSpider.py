@@ -5,7 +5,6 @@ from datetime import datetime
 from urllib.parse import parse_qs
 
 import winsound
-from PySimpleGUI.PySimpleGUI import PBar, Window
 from pandas import DataFrame
 import PySimpleGUI as sg
 import scrapy
@@ -56,8 +55,8 @@ class StockSpider(scrapy.Spider):
             logging.info("正常運算當中")
         self.info = (
             f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl}\n目前筆數:{self.current},確認存在股數:{self.exist}\n確認未存在股號數:{len(self.noExist)},待導入A類查尋筆數:{self.wait_url_A}")
-        self.not_mamual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.ready_crawl,'Stock','\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
-        if(not self.not_mamual_cancel and self.current < self.exist):
+        self.not_mamual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.ready_crawl+self.wait_url_A,'Stock','\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
+        if(not self.not_mamual_cancel and self.current < self.exist+self.wait_url_A):
             sg.popup('已手動取消！')
             raise CloseSpider("使用者取消！")
         
@@ -137,7 +136,7 @@ class StockSpider(scrapy.Spider):
                         data[1] = data[1].replace(',', '')
                         items[tables_ItemsName[tableID]] = -(float(data[1]))
                 else:
-                    items[tables_ItemsName[tableID]] = None
+                    items[tables_ItemsName[tableID]] = float(0.0)
 
     def parse(self, response):  # 擷取開始
         _page_exist = True
