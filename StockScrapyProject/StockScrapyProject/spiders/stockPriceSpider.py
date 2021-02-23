@@ -88,7 +88,7 @@ class stockPriceSpider(scrapy.Spider):
         dispatcher.connect(self.spider_closed,
                            signals.spider_closed)  # 設置爬蟲關閉時的動作
         self.CSV_File_PATH = CSV_File_PATH
-        self.Day = str(datetime.today().day-1)
+        self.Day = str(datetime.today().day)
         self.Month = str(f'{datetime.today().month:02d}')
         self.Year = str(datetime.today().year)
         self.ROC_Year = str(datetime.today().year-1911)
