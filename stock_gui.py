@@ -675,6 +675,12 @@ class MongoDB_Load():
         self.load_StockData()
         self.update_TableData()
 
+    def load_from_DB(self,query_slot,query):
+        temp_list=[]
+        for prt in self.codata.find(query, query_slot):
+            temp_list.append(prt)
+        self.tableDF=DataFrame(temp_list)
+
     def load_StockPriceData(self):
         self.tableType ='股價報告'
         self.clean_Data()
@@ -686,17 +692,10 @@ class MongoDB_Load():
         print(self.tableDF)
         self.StockPriceDF==self.tableDF
 
-
-    def load_from_DB(self,query_slot,query):
-        temp_list=[]
-        for prt in self.codata.find(query, query_slot):
-            temp_list.append(prt)
-        self.tableDF=DataFrame(temp_list)
-
     def load_MixData(self):
         self.load_StockData()
         self.load_StockPriceData()
-        
+
         pass
 
     def load_StockData(self):
