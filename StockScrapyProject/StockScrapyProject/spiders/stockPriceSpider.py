@@ -8,7 +8,7 @@ import PySimpleGUI as sg
 import scrapy
 from pydispatch import dispatcher
 from scrapy import signals
-
+import time
 from ..items import StockPrice_items
 
 
@@ -54,7 +54,7 @@ class stockPriceSpider(scrapy.Spider):
         for url in self.se_urls:
             yield scrapy.Request(url, callback=self.check_se_parse, priority=5, dont_filter=True)
 
-        yield scrapy.Request(self.se_urls[1], callback=self.twse_mining_Data_Parse, dont_filter=True)
+        #yield scrapy.Request(self.se_urls[1], callback=self.twse_mining_Data_Parse, dont_filter=True)
         return super().start_requests()
 
     def is_number(self, string):
@@ -88,7 +88,7 @@ class stockPriceSpider(scrapy.Spider):
         dispatcher.connect(self.spider_closed,
                            signals.spider_closed)  # 設置爬蟲關閉時的動作
         self.CSV_File_PATH = CSV_File_PATH
-        self.Day = str(datetime.today().day)
+        self.Day = str(datetime.today().day-1)
         self.Month = str(f'{datetime.today().month:02d}')
         self.Year = str(datetime.today().year)
         self.ROC_Year = str(datetime.today().year-1911)
@@ -141,6 +141,8 @@ class stockPriceSpider(scrapy.Spider):
         else:
             self.se_status = 'TWSE與TPEX未收盤'
         sg.SystemTray.notify(self.se_status, '')
+        if(self.is_TPEX_open and self.is_TPEX_open):
+            yield scrapy.Request(self.se_urls[1], callback=self.twse_mining_Data_Parse, dont_filter=True)
 
     def tpex_mining_Data_Parse(self, response):
         local_Co_ids = []
