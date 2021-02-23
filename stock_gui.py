@@ -380,14 +380,16 @@ def call_Price_Spider(isLocal, LOAD_CSVPATH):
         scrapyer.set_PriceSpider(csvpath)
         sg.popup_no_buttons('啟用爬蟲中...', grab_anywhere=False,
                             no_titlebar=True, auto_close=True)
-        main_Window.close()
+        main_Window.minimize()
+        main_Window.disable()
         Force_Exit_Window = set_Force_Exit()
         scrapyer.run_PriceSpider()
     else:
         scrapyer.set_PriceSpider(LOAD_CSVPATH)
         sg.popup_no_buttons('啟用爬蟲中...', grab_anywhere=False,
                             no_titlebar=True, auto_close=True)
-        main_Window.close()
+        main_Window.minimize()
+        main_Window.disable()
         Force_Exit_Window = set_Force_Exit()
         scrapyer.run_PriceSpider()
     print('\n')
@@ -405,7 +407,8 @@ def call_Stock_Spider(isAutoMode, isLocal, LOAD_CSVPATH, M_CO_ID):
                 Year=search_Year, Season=search_Season, Mode='Auto', CSV=csvpath)
             sg.popup_no_buttons('連接到資料庫中，請稍後...', non_blocking=True,
                                 grab_anywhere=False, no_titlebar=True, auto_close=True)
-            main_Window.close()
+            main_Window.minimize()
+            main_Window.disable()
             Force_Exit_Window = set_Force_Exit()
             scrapyer.run_StockSpider()
         else:
@@ -413,7 +416,8 @@ def call_Stock_Spider(isAutoMode, isLocal, LOAD_CSVPATH, M_CO_ID):
                 Year=search_Year, Season=search_Season, Mode='Auto', CSV=LOAD_CSVPATH)
             sg.popup_no_buttons('連接到資料庫中，請稍後...', non_blocking=True,
                                 grab_anywhere=False, no_titlebar=True, auto_close=True)
-            main_Window.close()
+            main_Window.minimize()
+            main_Window.disable()
             Force_Exit_Window = set_Force_Exit()
             scrapyer.run_StockSpider()
     else:
@@ -668,12 +672,16 @@ class MongoDB_Load():
         self.table_Heading=list(self.tableDF.head())
 
     def load_StockPriceTable(self):
-        self.load_StockPriceData()
+        is_Exist=True
+        is_Exist=self.load_StockPriceData()
         self.update_TableData()
+        return is_Exist
 
     def load_StockDataTable(self):
-        self.load_StockData()
+        is_Exist=True
+        is_Exist=self.load_StockData()
         self.update_TableData()
+        return is_Exist
 
     def load_from_DB(self,query_slot,query):
         temp_list=[]
@@ -682,15 +690,20 @@ class MongoDB_Load():
         self.tableDF=DataFrame(temp_list)
 
     def load_StockPriceData(self):
-        self.tableType ='股價報告'
-        self.clean_Data()
-        query_slot = {"_id": 0,"DATA_TYPE":0,"SUB_DATA_TYPE":0} #過濾輸出query
+        query_slot = {"_id": 0,"DATA_TYPE":0} #過濾輸出query
         query = {"DATA_TYPE": "股價資料"} #過濾搜尋query
-        self.load_from_DB(query,query_slot)
-        self.tableDF=self.tableDF[['CO_ID','Syear','SDate','CO_SHORT_NAME','Price']]
-        self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","Syear":"年份","SDate":"收盤日","CO_SHORT_NAME":"公司縮寫","Price":"收盤價"})
+        self.load_from_DB(query_slot,query)
+        try:
+            self.tableDF=self.tableDF[['CO_ID','SYear','SDate','CO_SHORT_NAME','Price','SUB_DATA_TYPE']]
+        except KeyError:
+            sg.popup('找不到股價資料')
+            return False
+        self.tableType ='股價資料'
+        self.clean_Data()
+        self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","SYear":"年份","SDate":"收盤日","CO_SHORT_NAME":"公司縮寫","Price":"收盤價","SUB_DATA_TYPE":"隸屬交易所"})
         print(self.tableDF)
         self.StockPriceDF==self.tableDF
+        return True
 
     def load_MixData(self):
         self.load_StockData()
@@ -699,21 +712,26 @@ class MongoDB_Load():
         pass
 
     def load_StockData(self):
-        self.tableType = '財務報告'
-        self.clean_Data() #清空列表
         query_slot = {"_id": 0,"DATA_TYPE":0,"SUB_DATA_TYPE":0} #過濾輸出query
         query = {"DATA_TYPE": "財務報告"} #過濾搜尋query
-        self.load_from_DB(query,query_slot)
-        self.tableDF=self.tableDF[['CO_ID','Syear','SSeason','CO_FULL_NAME','A1','A2','A3','A4','A5','A6','A7','B1','B2','B3','B4']]
+        self.load_from_DB(query_slot,query)
+        try:
+            self.tableDF=self.tableDF[['CO_ID','Syear','SSeason','CO_FULL_NAME','A1','A2','A3','A4','A5','A6','A7','B1','B2','B3','B4']]
+        except KeyError:
+            sg.popup('找不到財務報告資料')
+            return False
+        self.tableType = '財務報告'
+        self.clean_Data() #清空列表
         self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","Syear":"年份","SSeason":"季度","CO_FULL_NAME":"公司全名"})
         print(self.tableDF)
         self.StockDataDF=self.tableDF
+        return True
         
 
     def init_MongoDB(self):
         self.mongoDB_DBName = conf.get('MongoDB', 'DBNAME')
         self.mongoDB_CData = conf.get('MongoDB', 'CDATANAME')
-        self.load_StockDataTable()
+        #self.load_StockDataTable()
 
     def set_display_DB_Data(self):
         displayDB_Layout = [
@@ -721,10 +739,10 @@ class MongoDB_Load():
             [sg.Table(values=self.table_List, auto_size_columns=False, def_col_width=15,
                       headings=self.table_Heading, num_rows=min(30,len(self.table_List)), select_mode="extended",
                       enable_events=True, key='display_Table', bind_return_key=True, vertical_scroll_only=False)],
-            [sg.Text('過濾條件\t'), sg.Text('年份'), sg.Combo(self.year_filter_list, default_value='全部', k='Combo_Year', size=(6, 1)), sg.Text('季度'), sg.Combo(
-                self.season_filter_list, default_value='全部', k='Combo_Season', size=(6, 1)), sg.Text('股號'), sg.Input(k='Input_COID', size=(6, 1))],
+            [sg.Text('過濾條件\t'), sg.Text('年份'), sg.Combo(self.year_filter_list, default_value='全部', k='Combo_Year', size=(6, 1),readonly=True), sg.Text('季度'), sg.Combo(
+                self.season_filter_list, default_value='全部', k='Combo_Season', size=(6, 1),readonly=True), sg.Text('過濾數值'), sg.Input(k='Input_Filter', size=(35, 1))],
             [sg.Text('排序\t'), sg.Text('排列順序'), sg.Combo(['由大到小', '由小到大'], default_value='由大到小', k='Order_Type', size=(
-                10, 1)), sg.Text('排序基準'), sg.Combo(self.table_Heading, default_value='', k='Order_Data', size=(65, 1))],
+                10, 1),readonly=True), sg.Text('排序基準'), sg.Combo(self.table_Heading, default_value='', k='Order_Data', size=(65, 1),readonly=True)],
             [sg.Text('動作\t'), sg.Button('匯出'), sg.Button('關閉'),
              sg.Button('讀取財務報告'), sg.Button('讀取股價資料')],
         ]
@@ -973,8 +991,12 @@ while True:  # 監控視窗回傳
             main_Window.normal()
 
         if event == "讀取財務報告":
-            MDB_Load.load_StockDataTable()
-            MDB_Load.update_Window()
+            if(MDB_Load.load_StockDataTable()):
+                MDB_Load.update_Window()
+
+        if event == "讀取股價資料":
+            if(MDB_Load.load_StockPriceTable()):
+                MDB_Load.update_Window()
 
     if window == setting_Window:  # 主視窗 -> 設定視窗之互動
         window.bring_to_front()
