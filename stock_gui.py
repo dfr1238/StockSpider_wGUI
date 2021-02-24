@@ -3,6 +3,7 @@ import os
 import os.path as path
 import winsound
 from datetime import datetime
+from decimal import Decimal
 from math import ceil as math_ceil
 
 import pymongo
@@ -16,6 +17,7 @@ from StockScrapyProject.StockScrapyProject.run_scraper import Scraper
 sg.theme('DarkAmber')  # 設定顏色主題
 sg.set_options(auto_size_buttons=True)
 
+print('！！！此為運行時的控制台，關閉將會立刻關閉程式！！！')
 
 formula_Info = ('A1=現金及約當現金\nA2=透過損益按公允價值衡量之金融資產－流動\nA3=透過其他綜合損益按公允價值衡量之金融資產－流動\nA4=按攤銷後成本衡量之金融資產－流動\nA5=避險之金融資產－流動\nA6=非流動負債合計\nA7=普通股股本\nB1=營業收入合計\nB2=營業利益（損失）\nB3=營業外收入及支出合計\nB4=稀釋每股盈餘合計(EPS)\nPrice=收盤價')
 
@@ -379,22 +381,19 @@ def call_Price_Spider(isLocal, LOAD_CSVPATH):
     if(isLocal):
         scrapyer.set_PriceSpider(csvpath)
         sg.popup_no_buttons('啟用爬蟲中...', grab_anywhere=False,
-                            no_titlebar=True, auto_close=True)
+                            no_titlebar=True, auto_close=True,auto_close_duration=5)
         main_Window.minimize()
-        main_Window.disable()
-        Force_Exit_Window = set_Force_Exit()
+        main_Window.close()
         scrapyer.run_PriceSpider()
     else:
         scrapyer.set_PriceSpider(LOAD_CSVPATH)
         sg.popup_no_buttons('啟用爬蟲中...', grab_anywhere=False,
-                            no_titlebar=True, auto_close=True)
+                            no_titlebar=True, auto_close=True,auto_close_duration=5)
         main_Window.minimize()
-        main_Window.disable()
-        Force_Exit_Window = set_Force_Exit()
+        main_Window.close()
         scrapyer.run_PriceSpider()
     print('\n')
     winsound.MessageBeep(type=winsound.MB_OK)
-    sg.popup_ok('抓取股價資料完成！程式將會關閉！')
     os._exit(0)
 
 
@@ -405,20 +404,18 @@ def call_Stock_Spider(isAutoMode, isLocal, LOAD_CSVPATH, M_CO_ID):
         if(isLocal):
             scrapyer.set_StockSpider(
                 Year=search_Year, Season=search_Season, Mode='Auto', CSV=csvpath)
-            sg.popup_no_buttons('連接到資料庫中，請稍後...', non_blocking=True,
-                                grab_anywhere=False, no_titlebar=True, auto_close=True)
+            sg.popup_no_buttons('啟用爬蟲中...', grab_anywhere=False,
+                            no_titlebar=True, auto_close=True,auto_close_duration=5)
             main_Window.minimize()
-            main_Window.disable()
-            Force_Exit_Window = set_Force_Exit()
+            main_Window.close()
             scrapyer.run_StockSpider()
         else:
             scrapyer.set_StockSpider(
                 Year=search_Year, Season=search_Season, Mode='Auto', CSV=LOAD_CSVPATH)
-            sg.popup_no_buttons('連接到資料庫中，請稍後...', non_blocking=True,
-                                grab_anywhere=False, no_titlebar=True, auto_close=True)
+            sg.popup_no_buttons('啟用爬蟲中...', grab_anywhere=False,
+                            no_titlebar=True, auto_close=True,auto_close_duration=5)
             main_Window.minimize()
-            main_Window.disable()
-            Force_Exit_Window = set_Force_Exit()
+            main_Window.close()
             scrapyer.run_StockSpider()
     else:
         scrapyer.set_StockSpider(
@@ -629,20 +626,25 @@ def local_CSV_Import_usercsvfile():  # 選擇外部股號表檔案
 
 class MongoDB_Load():
     global DBClient, DB_LIST, CODATA_LIST, year_List, season_List
-    tableDF=[]
-    table_List = ['TEST', 'TEST', 'TEST']
-    table_Heading = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
+    default_dict={'測試欄位':['測試資料'],'測試欄位2':['測試資料'],'測試欄位3':['測試資料']}
+    tableDF=DataFrame(data=default_dict)
+    table_List = ['測試資料']
+    table_Heading = ['測試欄位']
     year_filter_list = ['全部']
     season_filter_list = ['全部']
     year_filter_list += year_List
     season_filter_list += season_List
     mongoDB_DBName = ''
     mongoDB_CData = ''
-    tableType = ''
+    tableType = '請選擇要讀取的資料'
     db_Data_Newest_Year = ''
     db_Data_Newest_Season = ''
-    StockDataDF=''
-    StockPriceDF=''
+    StockDataDF=DataFrame([])
+    calcDataDF=DataFrame()
+    calcAnsDF=DataFrame()
+    StockPriceDF=DataFrame([])
+    MixDataDF=DataFrame([])
+    Date=''
     db=''
     codata=''
     displayDB_Layout = []
@@ -658,7 +660,239 @@ class MongoDB_Load():
         self.db = DBClient[self.mongoDB_DBName] #獲得現在資料庫
         self.codata = self.db[self.mongoDB_CData] #獲得現在資料庫中哪個資料集
         pass
+    
+    def calc_Forumla(self,coid_list,ForumlaType):
+        calcAnsDF=DataFrame()
+        start_year=int(self.db_Data_Newest_Year)
+        start_season=int(self.db_Data_Newest_Season)
+        current_process=0
+        coid_list_max=len(coid_list)
+        for coid in coid_list:
+            return_FType=False
+            current_process+=1
+            ans_block=0
+            sg.one_line_progress_meter('計算資料..',current_process,coid_list_max,'calc',orientation='h')
+            calc_VarData=self.calcDataDF[(self.calcDataDF["股號"]==coid) & (self.calcDataDF["年份"] == str(start_year)) & (self.calcDataDF["季度"] == str(start_season))]
+            name=calc_VarData.iloc[0]["名稱"]
+            recent_EPS=calc_VarData.iloc[0]["近四季 EPS"]
+            if(ForumlaType=='公式一'):
+                return_FType=True
+                calc_block_1=0
+                calc_block_1+=calc_VarData.iloc[0]["A1"]
+                calc_block_1+=calc_VarData.iloc[0]["A2"]
+                calc_block_1+=calc_VarData.iloc[0]["A3"]
+                calc_block_1+=calc_VarData.iloc[0]["A4"]
+                calc_block_1+=calc_VarData.iloc[0]["A5"]
+                calc_block_1-=calc_VarData.iloc[0]["A6"]
+                calc_block_2=0
+                calc_block_2=calc_VarData.iloc[0]["A7"]
+                calc_block_2/=10
+                calc_block_3=calc_block_1/calc_block_2
+                calc_block_3-=calc_VarData.iloc[0]["股價"]
+                ans_block=calc_block_3
+                ans_block=round(ans_block,2)
+                pass
+            
+            if(ForumlaType=='公式二'):
+                return_FType=True
+                calc_block_1=0
+                calc_block_1+=calc_VarData.iloc[0]["B4"]
+                calc_block_1-=calc_VarData.iloc[0]["去年同期B4"]#
+                calc_block_2=0
+                calc_block_2=calc_VarData.iloc[0]["去年同期B4"]#
+                calc_block_3=0
+                calc_block_3=calc_block_1/calc_block_2#
+                calc_block_4=0
+                calc_block_4=calc_block_3*100
+                calc_block_4-=calc_VarData.iloc[0]["股價"]#
+                calc_block_5=0
+                calc_block_5=calc_block_4/calc_VarData.iloc[0]["近四季 EPS"]#
+                ans_block=calc_block_5
+                ans_block=round(ans_block,2)
+                pass
 
+            if(ForumlaType== '公式三'):
+                return_FType=True
+                calc_block_1=0
+                calc_block_1=calc_VarData.iloc[0]["B2"]
+                calc_block_1-=calc_VarData.iloc[0]["去年同期B2"]#
+                calc_block_2=0
+                calc_block_2=calc_VarData.iloc[0]["去年同期B2"]#
+                calc_block_3=0
+                calc_block_3=calc_block_1/calc_block_2#
+                calc_block_4=0
+                calc_block_4=calc_block_3*100
+                calc_block_4-=calc_VarData.iloc[0]["股價"]#
+                calc_block_5=0
+                calc_block_5=calc_block_4/calc_VarData.iloc[0]["近四季 EPS"]#
+                ans_block=calc_block_5
+                ans_block=round(ans_block,2)
+                pass
+            if(ForumlaType == '公式四'):
+                return_FType=True
+                calc_block_1=0
+                calc_block_1=calc_VarData.iloc[0]["B2"]
+                calc_block_1-=calc_VarData.iloc[0]["去年同期B2"]#
+                bool_block=calc_block_1 > 1
+                calc_block_2=0
+                calc_block_2=calc_VarData.iloc[0]["B3"]
+                calc_block_2-=calc_VarData.iloc[0]["去年同期B3"]#
+                bool_block2=calc_block_2 < 1
+                if(bool_block and bool_block2):
+                    ans_block='符合'
+                else:
+                    continue
+            if(ForumlaType == '公式五'):
+                calc_block_1=0
+                calc_block_1=calc_VarData.iloc[0]["B2"]
+                calc_block_1-=calc_VarData.iloc[0]["去年同期B2"]#
+                bool_block=calc_block_1 > 1
+                if(bool_block):
+                    ans_block='符合'
+                else:
+                    continue
+                pass
+            if(ForumlaType == '公式六'):
+                calc_block_1=0
+                calc_block_1=calc_VarData.iloc[0]["B3"]
+                calc_block_1-=calc_VarData.iloc[0]["去年同期B3"]#
+                bool_block=calc_block_1 < 1
+                if(bool_block):
+                    ans_block='符合'
+                else:
+                    continue
+                pass
+            dict= {"股號":str(coid),"名稱":name,"年份":str(start_year),"季度":str(start_season),"公式":ForumlaType,"答案":ans_block,"近四季 EPS":recent_EPS}
+            cols=['股號','名稱','年份','季度','公式','答案','近四季 EPS']
+            self.calcAnsDF = self.calcAnsDF.append(dict, ignore_index=True)
+            self.calcAnsDF = self.calcAnsDF[cols]
+            if(return_FType):
+                print(self.calcAnsDF.dtypes)
+            print(self.calcAnsDF)
+        pass
+    def get_calc_Formula_var(self,coid_list):
+        print(coid_list)
+        start_year=int(self.db_Data_Newest_Year)
+        start_season=int(self.db_Data_Newest_Season)
+        run_year=start_year
+        run_season=start_season
+        end_year=start_year
+        end_year-=1
+        current_process=0
+        coid_list_max=len(coid_list)
+        for coid in coid_list: #目前股號
+            current_process+=1
+            sg.one_line_progress_meter('從資料中抓取變數...',current_process,coid_list_max,'calc',orientation='h')
+            global local_csvdf
+            run_year=start_year
+            count_Season=1
+            run_season=start_season
+            local_csvdfNameData=local_csvdf[(local_csvdf["代號"]==coid)]
+            getStockData_StartTime=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year)) & (self.StockDataDF["季度"] == str(start_season))]
+            getStockData_LastYear=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year-1)) & (self.StockDataDF["季度"] == str(start_season))]
+            getStockPriceData=self.StockPriceDF[ ( self.StockPriceDF["股號"]==coid ) & ( self.StockPriceDF["收盤日"] == self.Date )]
+            recent_EPS=0.0
+            name=local_csvdfNameData.iloc[0]["名稱"]
+            A1=getStockData_StartTime.iloc[0]["A1"]
+            A2=getStockData_StartTime.iloc[0]["A2"]
+            A3=getStockData_StartTime.iloc[0]["A3"]
+            A4=getStockData_StartTime.iloc[0]["A4"]
+            A5=getStockData_StartTime.iloc[0]["A5"]
+            A6=getStockData_StartTime.iloc[0]["A6"]
+            A7=getStockData_StartTime.iloc[0]["A7"]
+            B1=getStockData_StartTime.iloc[0]["B1"]
+            B2=getStockData_StartTime.iloc[0]["B2"]
+            B3=getStockData_StartTime.iloc[0]["B3"]
+            last_year_B3=getStockData_LastYear.iloc[0]["B3"]
+            last_year_B2=getStockData_LastYear.iloc[0]["B2"]
+            last_year_B4=0.0
+            B4=0.0
+            if(start_season!=4):
+                B4=getStockData_StartTime.iloc[0]["B4"]
+                last_year_B4=getStockData_LastYear.iloc[0]["B4"]
+            else:
+                B4=getStockData_StartTime.iloc[0]["B4"]
+                last_year_B4=getStockData_LastYear.iloc[0]["B4"]
+                #print('年',run_year,'季度',run_season)
+                for season in range(3,0,-1):
+                    temp_S1_S3_SUM=0.0
+                    temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year)) & (self.StockDataDF["季度"] == str(season))]
+                    temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
+                #print(temp_S1_S3_SUM)
+                B4-=temp_S1_S3_SUM
+                B4=round(B4,2)
+                temp_S1_S3_SUM=0.0
+                #print('年',run_year,'季度',run_season)
+                for season in range(3,0,-1):
+                    temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year-1)) & (self.StockDataDF["季度"] == str(season))]
+                    temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
+                last_year_B4-=temp_S1_S3_SUM
+                last_year_B4=round(last_year_B4,2)
+            try:
+                Price=getStockPriceData.iloc[0]["收盤價"]
+            except IndexError:
+                Price=0.0
+            while run_year >= end_year: #目前年份
+                if(count_Season > 4):
+                    #print('Out Year')
+                    break
+                while run_season >= 1 and count_Season <= 4: #目前季度
+                        #print(f'COID: {coid} RUNY: {run_year} RUNS : {run_season} countS: {count_Season}')
+                        getStockData_PerSeason=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(run_year)) & (self.StockDataDF["季度"] == str(run_season))]
+                        if(run_season!=4):
+                            recent_EPS+=getStockData_PerSeason.iloc[0]["B4"]
+                            #print('近四季',recent_EPS)
+                        else:
+                            #print('年',run_year,'季度',run_season)
+                            temp_S1_S3_SUM=0.0
+                            for season in range(3,0,-1):
+                                temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(run_year)) & (self.StockDataDF["季度"] == str(season))]
+                                temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
+                                #print(temp_S1_S3_SUM)
+                            
+                            S4_EPS=round(getStockData_PerSeason.iloc[0]["B4"],2)
+                            #print('第四季EPS',S4_EPS)
+                            #print('前三季總和',temp_S1_S3_SUM)
+                            S4_EPS-=temp_S1_S3_SUM
+                            #print('第四季EPS-前三季EPS',round(S4_EPS,2))
+                            recent_EPS+=round(S4_EPS,2)
+                            recent_EPS=round(recent_EPS,2)
+                            print('近四季',recent_EPS)
+                        run_season-=1
+                        count_Season+=1
+                        #print(f'{getStockData_PerSeason}')
+                run_season=4
+                run_year-=1
+                #print('Out Season')
+            dict={'股號':str(coid),'名稱':name,'年份':str(self.db_Data_Newest_Year),'季度':str(self.db_Data_Newest_Season),'A1':A1,'A2':A2,'A3':A3,'A4':A4,'A5':A5,'A6':A6,'A7':A7,'B1':B1,'B2':B2,'B3':B3,'B4':B4,'去年同期B2':last_year_B2,'去年同期B4':last_year_B4,'去年同期B3':last_year_B3,'股價':Price,'近四季 EPS':recent_EPS}
+            self.calcDataDF = self.calcDataDF.append(dict, ignore_index=True,sort=False)
+            cols=['股號','名稱','年份','季度','A1','A2','A3','A4','A5','A6','A7','B1','B2','B3','B4','去年同期B2','去年同期B3','去年同期B4','股價','近四季 EPS']
+            self.calcDataDF = self.calcDataDF[cols]
+            print(f'當年當季資料：{getStockData_StartTime}\n去年同期資料：{getStockData_LastYear}\n今日股價：{Price}\n近四季EPS：{recent_EPS}')
+        print(self.calcDataDF)
+        return True
+
+    def init_calc(self,FormulaType):
+        coid_list=[]
+        self.load_MixData()
+        self.calcAnsDF=DataFrame()
+        self.calcDataDF=DataFrame()
+        self.tableType = FormulaType
+        self.Date = datetime.today().strftime("%Y-%m-%d")
+        #self.Date = "2021-02-23"
+        coid_list=self.StockDataDF["股號"].drop_duplicates().tolist()
+        self.db_Data_Newest_Year = self.StockDataDF["年份"].max()
+        self.db_Data_Newest_Season = self.StockDataDF.loc[self.StockDataDF["年份"]==self.db_Data_Newest_Year,"季度"].max()
+        print(f'年份：{self.db_Data_Newest_Year} 季度：{self.db_Data_Newest_Season}')
+        if(self.get_calc_Formula_var(coid_list)):
+            self.calc_Forumla(coid_list,FormulaType)
+            self.calcAnsDF.sort_values(by='答案',ascending=True)
+            self.tableDF = self.calcAnsDF
+            self.load_AnsTable()
+            return True
+    def load_AnsTable(self):
+        self.update_TableData()
+        pass
     def update_Window(self):
         global displayDB_Window
         self.update_TableData()
@@ -666,6 +900,9 @@ class MongoDB_Load():
         displayDB_Window=None
         displayDB_Window=self.set_display_DB_Data()
         displayDB_Window.bring_to_front()
+
+    def update_TableWithoutColChange(self):
+        displayDB_Window['display_Table'].update(values=self.table_List,num_rows=min(30,len(self.table_List)))
 
     def update_TableData(self):
         self.table_List=self.tableDF.values.tolist()
@@ -685,7 +922,11 @@ class MongoDB_Load():
 
     def load_from_DB(self,query_slot,query):
         temp_list=[]
+        current_process=0
+        max_process=self.codata.count_documents(filter=query)
         for prt in self.codata.find(query, query_slot):
+            current_process+=1
+            sg.one_line_progress_meter('從資料庫讀入資料..',current_process,max_process,'calc',orientation='h')
             temp_list.append(prt)
         self.tableDF=DataFrame(temp_list)
 
@@ -701,14 +942,14 @@ class MongoDB_Load():
         self.tableType ='股價資料'
         self.clean_Data()
         self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","SYear":"年份","SDate":"收盤日","CO_SHORT_NAME":"公司縮寫","Price":"收盤價","SUB_DATA_TYPE":"隸屬交易所"})
-        print(self.tableDF)
-        self.StockPriceDF==self.tableDF
+        #print(self.tableDF)
+        self.StockPriceDF=self.tableDF
+        print(self.StockPriceDF)
         return True
 
     def load_MixData(self):
         self.load_StockData()
         self.load_StockPriceData()
-
         pass
 
     def load_StockData(self):
@@ -716,13 +957,13 @@ class MongoDB_Load():
         query = {"DATA_TYPE": "財務報告"} #過濾搜尋query
         self.load_from_DB(query_slot,query)
         try:
-            self.tableDF=self.tableDF[['CO_ID','Syear','SSeason','CO_FULL_NAME','A1','A2','A3','A4','A5','A6','A7','B1','B2','B3','B4']]
+            self.tableDF=self.tableDF[['CO_ID','SYear','SSeason','CO_FULL_NAME','A1','A2','A3','A4','A5','A6','A7','B1','B2','B3','B4']]
         except KeyError:
             sg.popup('找不到財務報告資料')
             return False
         self.tableType = '財務報告'
         self.clean_Data() #清空列表
-        self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","Syear":"年份","SSeason":"季度","CO_FULL_NAME":"公司全名"})
+        self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","SYear":"年份","SSeason":"季度","CO_FULL_NAME":"公司全名"})
         print(self.tableDF)
         self.StockDataDF=self.tableDF
         return True
@@ -731,22 +972,48 @@ class MongoDB_Load():
     def init_MongoDB(self):
         self.mongoDB_DBName = conf.get('MongoDB', 'DBNAME')
         self.mongoDB_CData = conf.get('MongoDB', 'CDATANAME')
+        self.update_TableData()
         #self.load_StockDataTable()
 
+    def sort_table(self,key,order1,order2,order3):
+        order_com1=False
+        order_com2=False
+        order_com3=False
+        if (order1=='由大到小'):
+            order_com1=False
+        else:
+            order_com1=True
+        if (order2=='由大到小'):
+            order_com2=False
+        else:
+            order_com2=True
+        if (order3=='由大到小'):
+            order_com3=False
+        else:
+            order_com3=True
+
+        self.tableDF=self.tableDF.sort_values(by=key,ascending=[order_com1,order_com2,order_com3],axis=0)
+        self.update_TableData()
+        self.update_TableWithoutColChange()
+        pass
     def set_display_DB_Data(self):
         displayDB_Layout = [
             [sg.Text('目前顯示'), sg.Text(self.tableType, k='display_Type')],
-            [sg.Table(values=self.table_List, auto_size_columns=False, def_col_width=15,
+            [sg.Table(values=self.table_List, auto_size_columns=False, def_col_width=10,justification="left",
                       headings=self.table_Heading, num_rows=min(30,len(self.table_List)), select_mode="extended",
                       enable_events=True, key='display_Table', bind_return_key=True, vertical_scroll_only=False)],
             [sg.Text('過濾條件\t'), sg.Text('年份'), sg.Combo(self.year_filter_list, default_value='全部', k='Combo_Year', size=(6, 1),readonly=True), sg.Text('季度'), sg.Combo(
-                self.season_filter_list, default_value='全部', k='Combo_Season', size=(6, 1),readonly=True), sg.Text('過濾數值'), sg.Input(k='Input_Filter', size=(35, 1))],
-            [sg.Text('排序\t'), sg.Text('排列順序'), sg.Combo(['由大到小', '由小到大'], default_value='由大到小', k='Order_Type', size=(
-                10, 1),readonly=True), sg.Text('排序基準'), sg.Combo(self.table_Heading, default_value='', k='Order_Data', size=(65, 1),readonly=True)],
+                self.season_filter_list, default_value='全部', k='Combo_Season', size=(6, 1),readonly=True,enable_events=True), sg.Text('過濾數值'), sg.Input(k='Input_Filter', size=(35, 1))],
+            [sg.Text('排序資料'), sg.Combo(self.table_Heading, default_value=self.table_Heading[0], k='Order_Data_1', size=(10, 1),readonly=True,enable_events=True),sg.Combo(self.table_Heading, default_value=self.table_Heading[1], k='Order_Data_2', size=(10, 1),readonly=True,enable_events=True),sg.Combo(self.table_Heading, default_value=self.table_Heading[2], k='Order_Data_3', size=(10, 1),readonly=True,enable_events=True)],
+            [sg.Text('順序類型'), sg.Combo(['由大到小', '由小到大'], default_value='由大到小', k='Order_Type_1', size=(
+                10, 1),readonly=True,enable_events=True),sg.Combo(['由大到小', '由小到大'], default_value='由大到小', k='Order_Type_2', size=(
+                10, 1),readonly=True,enable_events=True),sg.Combo(['由大到小', '由小到大'], default_value='由大到小', k='Order_Type_3', size=(
+                10, 1),readonly=True,enable_events=True)],
             [sg.Text('動作\t'), sg.Button('匯出'), sg.Button('關閉'),
-             sg.Button('讀取財務報告'), sg.Button('讀取股價資料')],
+             sg.Button('讀取財務報告'), sg.Button('讀取股價資料'),sg.Button(
+            '查閱欄位變數')],
         ]
-        return sg.Window("顯示資料庫資料", displayDB_Layout, resizable=True, margins=(5, 5), finalize=True, modal=True, element_justification="center")
+        return sg.Window("顯示資料庫資料", displayDB_Layout, resizable=True, margins=(5, 5), finalize=True, modal=False, element_justification="center")
 
 
 # 視窗設計
@@ -846,7 +1113,7 @@ def set_Main_Window():  # 主視窗
         [sg.Button('開始爬取財務報告', disabled=(not DB_READY))],
         [sg.Button('開始爬取股價資料', disabled=(not DB_READY))],
         [sg.Text('[運行計算式]')],
-        [sg.Combo(['公式一', '公式二', '公式三', '公式四'],
+        [sg.Combo(['公式一', '公式二', '公式三', '公式四', '公式五', '公式六'],
                   default_value='公式一', k='Combo_Formula', size=(8, 1), readonly=True, enable_events=True),
          sg.Text('公式詳情'), sg.Text('[(A1+A2+A3+A4+A5)-A6] / (A7/10) - Price', k='Combo_Formula_Full', size=(65, 1))],
         [sg.Button('計算', disabled=(not DB_READY)), sg.Button(
@@ -933,6 +1200,12 @@ while True:  # 監控視窗回傳
             if values['Combo_Formula'] == '公式四':
                 window['Combo_Formula_Full'].update(
                     value="( B2 - 去年同期 B2 ) > 1 or ( B3- 去年同期 B3 ) < 1")
+            if values['Combo_Formula'] == '公式五':
+                window['Combo_Formula_Full'].update(
+                    value="( B2 - 去年同期 B2 ) > 1")
+            if values['Combo_Formula'] == '公式六':
+                window['Combo_Formula_Full'].update(
+                    value="( B3- 去年同期 B3 ) < 1")
         if event in (sg.WIN_CLOSED, '離開'):
             break
         if event == "開始爬取股價資料":
@@ -960,17 +1233,11 @@ while True:  # 監控視窗回傳
             connect_Mongo(False, False, False, True)
             main_Window = None
             main_Window = set_Main_Window()
-        if event == "公式一":
-            sg.popup('執行公式1')
 
-        if event == "公式二":
-            sg.popup('執行公式2')
-
-        if event == "公式三":
-            sg.popup('執行公式3')
-
-        if event == "公式四":
-            sg.popup('執行公式4')
+        if event == "計算":
+            main_Window.minimize()
+            if(MDB_Load.init_calc(str(values['Combo_Formula']))):
+                displayDB_Window = MDB_Load.set_display_DB_Data()
 
         if event == "設定":
             setting_Window = set_Setting_Window()
@@ -990,6 +1257,12 @@ while True:  # 監控視窗回傳
             displayDB_Window = None
             main_Window.normal()
 
+        if event == "Order_Data_1" or event == "Order_Data_2"  or event == "Order_Data_3" or event == "Order_Type_1" or event == "Order_Type_2" or event == "Order_Type_3":
+            Order_Data=[str(values['Order_Data_1']),str(values['Order_Data_2']),str(values['Order_Data_3'])]
+            MDB_Load.sort_table(Order_Data,str(values['Order_Type_1']),str(values['Order_Type_2']),str(values['Order_Type_3']))
+
+        if event == "查閱欄位變數":
+            sg.popup(formula_Info,'公式變數參考，你可以變更公式時移動視窗來參考。',no_titlebar=True,grab_anywhere=True,non_blocking=True)           
         if event == "讀取財務報告":
             if(MDB_Load.load_StockDataTable()):
                 MDB_Load.update_Window()
