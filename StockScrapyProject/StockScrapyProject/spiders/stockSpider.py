@@ -22,6 +22,7 @@ class StockSpider(scrapy.Spider):
     info = ''
     Season = ''
     Mode = ''
+    wait_url_A_MAX=0
     name = 'StockSpider'  # 爬蟲名稱。
     start_urls = []
     noExist = []
@@ -55,13 +56,11 @@ class StockSpider(scrapy.Spider):
             logging.info("正常運算當中")
         self.info = (
             f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl}\n目前筆數:{self.current},確認存在股數:{self.exist}\n確認未存在股號數:{len(self.noExist)},待導入A類查尋筆數:{self.wait_url_A}")
-        self.not_mamual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.ready_crawl+self.wait_url_A,'Stock','\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
+        self.not_mamual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.ready_crawl+self.wait_url_A_MAX,'Stock','運行時請勿點擊視窗，顯示沒有回應請勿關閉，為正常現象。\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
         if(not self.not_mamual_cancel and self.current < self.exist+self.wait_url_A):
             sg.popup('已手動取消！')
             raise CloseSpider("使用者取消！")
         
-        if(self.current % 15 == 0 or self.current == 1):
-            sg.SystemTray.notify(title, self.info)
         logging.info(self.info)
         print("\n未存在股號列表：")
         for printdata in range(len(self.noExist)):
@@ -87,6 +86,7 @@ class StockSpider(scrapy.Spider):
             df = DataFrame(dict)
             filename = f'.\{dt_string} -財務報告- {self.Year} 年第 {self.Season} 中未存在股號.csv'
             df.to_csv(filename, index=False)
+            print(f'已匯出未存在的股號至{filename}')
             sg.SystemTray.notify(f'已匯出未存在的股號至\n{filename}')
         else:
             logging.info('無缺漏股號。')
@@ -103,12 +103,12 @@ class StockSpider(scrapy.Spider):
         self.Season = Season  # 帶入參數季度 -a Season 數字字串
         self.Mode = Mode  # 帶入爬蟲模式 -a Mode 文字字串，Auto與Manual模式
         if(Mode == 'Auto' or Mode == 'A'):
-            sg.SystemTray.notify('財務報告爬蟲－初始化', '以批次模式進行中...')
+            sg.SystemTray.notify('財務報告爬蟲－初始化', '以批次模式進行中...', display_duration_in_ms=300, fade_in_duration=.2)
             logging.info(f'目前輸入的參數，年份：{Year}、季度{Season}、模式：{Mode}、CSV路徑:{CSV}')
             self.import_csv = CSV  # 匯入CSV之路徑 -a CSV 'Path'
             self.auto_Mode()
         elif (Mode == 'Manual' or Mode == 'M'):
-            sg.SystemTray.notify('財務報告爬蟲－初始化', '以單筆模式進行中...')
+            sg.SystemTray.notify('財務報告爬蟲－初始化', '以單筆模式進行中...', display_duration_in_ms=300, fade_in_duration=.2)
             logging.info(f'目前輸入的參數，年份：{Year}、季度{Season}、模式：{Mode}、股號:{CO_ID}')
             self.manual_Mode(CO_ID)
         else:
@@ -160,6 +160,7 @@ class StockSpider(scrapy.Spider):
                 _page_exist = False
                 logging.info("該股類型C無資料，轉入類型A查資料。")
                 self.wait_url_A += 1
+                self.wait_url_A_MAX+=1
                 self.start_urls.append(
                     f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={company_Id[0]}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=A')
                 pass
@@ -171,7 +172,7 @@ class StockSpider(scrapy.Spider):
             co_name = str(response.xpath(
                 '/html/body/div[2]/div[1]/div[2]/span[1]//text()').get())
             items['CO_FULL_NAME'] = co_name
-            items['Syear'] = self.Year
+            items['SYear'] = self.Year
             items['SSeason'] = self.Season
             # 主要爬蟲區
             tables1_ID = ['1100', '1110', '1120',
