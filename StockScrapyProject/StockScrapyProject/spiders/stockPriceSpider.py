@@ -22,6 +22,8 @@ class stockPriceSpider(scrapy.Spider):
     Day = ''
     info = ''
     Date = ''
+    isExist=0
+    current=0
     Co_ids = []
 
     # 判別是否為首次運行
@@ -71,9 +73,10 @@ class stockPriceSpider(scrapy.Spider):
             self.noExist = list(filter(None, self.noExist))
             dict = {'代號': self.noExist}
             df = DataFrame(dict)
-            filename = f'.\{dt_string}-股價資料-未存在股號.csv'
+            filename = f'.\{dt_string} -股價資料- {self.Date} 中未存在股號.csv'
             df.to_csv(filename, index=False)
             print(f'已匯出未存在的股號至{filename}')
+            sg.SystemTray.notify(f'已匯出未存在的股號至\n{filename}')
         else:
             print('無缺漏股號。')
 
@@ -83,6 +86,7 @@ class stockPriceSpider(scrapy.Spider):
             for row in rows:
                 if((len(row['代號']) == 4) and row['代號'].isnumeric()):  # 檢查股號是否為純號碼以及是否為4位數
                     self.Co_ids.append(row['代號'])
+                    self.isExist+=1
 
     def __init__(self, CSV_File_PATH, **kwargs):
         dispatcher.connect(self.spider_closed,
@@ -109,13 +113,14 @@ class stockPriceSpider(scrapy.Spider):
         self.output_EmptyList_csv()
         if(self.is_TPEX_open and self.is_TWSE_open):
             winsound.PlaySound("SystemAsterisk",winsound.SND_ALIAS)
+            sg.popup_ok('抓取股價資料完成！程式將會關閉！')
         else:
             winsound.PlaySound("SystemQuestion",winsound.SND_ALIAS)
-        sg.popup(self.se_status)
+            sg.popup(self.se_status)
 
     def check_se_parse(self, response):
         title = '正在線上檢查今日證券交換所是否開盤...'
-        sg.SystemTray.notify(title, '')
+        sg.SystemTray.notify(title, '', display_duration_in_ms=300, fade_in_duration=.2)
         domain = urlParse.urlparse(response.url).hostname
         print('線上檢查今日證券交換所是否開盤...')
         print(f'網域：{domain}')
@@ -140,7 +145,7 @@ class stockPriceSpider(scrapy.Spider):
             self.se_status = 'TPEX未收盤，TWSE已收盤'
         else:
             self.se_status = 'TWSE與TPEX未收盤'
-        sg.SystemTray.notify(self.se_status, '')
+        sg.SystemTray.notify(self.se_status, '', display_duration_in_ms=300, fade_in_duration=.2)
         if(self.is_TPEX_open and self.is_TPEX_open):
             yield scrapy.Request(self.se_urls[1], callback=self.twse_mining_Data_Parse, dont_filter=True)
 
@@ -158,6 +163,8 @@ class stockPriceSpider(scrapy.Spider):
             print(local_Co_ids)
 
             for co_id in local_Co_ids:
+                self.current+=1
+                self.not_mamual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.isExist,'Stock','運行時請勿點擊視窗，顯示沒有回應請勿關閉，為正常現象。\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
                 items = StockPrice_items()
                 print('First RUN:', self.TWSE_First_Run)
                 print(co_id)
@@ -212,6 +219,8 @@ class stockPriceSpider(scrapy.Spider):
                 print(f'網域：{domain}')
 
                 for co_id in local_Co_ids:
+                    self.current+=1
+                    self.not_mamual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.isExist,'Stock','運行時請勿點擊視窗，顯示沒有回應請勿關閉，為正常現象。\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
                     items = StockPrice_items()
                     print('First RUN:', self.TWSE_First_Run)
                     print(co_id)
