@@ -84,10 +84,10 @@ class StockSpider(scrapy.Spider):
             self.noExist = list(filter(None, self.noExist))
             dict = {'代號': self.noExist}
             df = DataFrame(dict)
-            filename = f'.\{dt_string} -財務報告- {self.Year} 年第 {self.Season} 中未存在股號.csv'
+            filename = f'.\{dt_string} -財務報告- {self.Year} 年第 {self.Season} 季中未存在股號.csv'
             df.to_csv(filename, index=False)
             print(f'已匯出未存在的股號至{filename}')
-            sg.SystemTray.notify(f'已匯出未存在的股號至\n{filename}')
+            sg.SystemTray.notify('爬取完成',f'已匯出未存在的股號至\n{filename}')
         else:
             logging.info('無缺漏股號。')
 
