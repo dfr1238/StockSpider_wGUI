@@ -12,7 +12,7 @@ class StockSpider_items(scrapy.Item):
     SUB_DATA_TYPE= scrapy.Field() #子資料類別－報告類型
     CO_ID = scrapy.Field() #股號
     CO_FULL_NAME = scrapy.Field() #公司全名
-    Syear = scrapy.Field() #年度
+    SYear = scrapy.Field() #年度
     SSeason = scrapy.Field() #季度
     ##A
     A1 = scrapy.Field() #A1:現金及約當現金
