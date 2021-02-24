@@ -4,7 +4,11 @@ import os.path as path
 import winsound
 from datetime import datetime
 from decimal import Decimal
-from math import ceil as math_ceil
+from math import ceil as math_ceil, nan
+
+import pathlib
+
+import numpy as np
 
 import pymongo
 import PySimpleGUI as sg
@@ -649,6 +653,23 @@ class MongoDB_Load():
     codata=''
     displayDB_Layout = []
 
+
+    def filter_db_Table(self,filter_String):
+        if(filter_String!=""):
+            filter_list=filter(lambda x: filter_String in x[0:] ,self.table_List)
+            filter_list=list(filter_list)
+            print(filter_list)
+            displayDB_Window['display_Table'].update(values=filter_list)
+        else:
+            filter_list=[]
+            self.update_TableData()
+            self.update_TableWithoutColChange()
+    def export_Table(self):
+        filename = sg.popup_get_file('選擇儲存路徑','匯出表格',default_path=f'{self.Date } 之{self.tableType} 匯出',save_as=True,file_types=(("CSV 檔","*.csv"),("Excel 檔","*.xlsx")),no_window=True)
+        if(pathlib.Path(filename).suffix==".csv"):
+            self.tableDF.to_csv(filename,encoding='utf-8', index=False)
+        if(pathlib.Path(filename).suffix==".xlsx"):
+            self.tableDF.to_excel(filename,encoding='utf-8', index=False)
     def clean_Data(self):
         self.table_List.clear()
         self.table_Heading.clear()
@@ -662,7 +683,7 @@ class MongoDB_Load():
         pass
     
     def calc_Forumla(self,coid_list,ForumlaType):
-        calcAnsDF=DataFrame()
+        self.calcAnsDF=DataFrame()
         start_year=int(self.db_Data_Newest_Year)
         start_season=int(self.db_Data_Newest_Season)
         current_process=0
@@ -769,6 +790,7 @@ class MongoDB_Load():
             cols=['股號','名稱','年份','季度','答案','近四季 EPS']
             self.calcAnsDF = self.calcAnsDF.append(dict, ignore_index=True)
             self.calcAnsDF = self.calcAnsDF[cols]
+            self.calcAnsDF = self.calcAnsDF.replace([np.inf, -np.inf], np.nan).dropna(axis=0)
             if(return_FType):
                 print(self.calcAnsDF.dtypes)
             print(self.calcAnsDF)
@@ -790,12 +812,16 @@ class MongoDB_Load():
             run_year=start_year
             count_Season=1
             run_season=start_season
-            local_csvdfNameData=local_csvdf[(local_csvdf["代號"]==coid)]
             getStockData_StartTime=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year)) & (self.StockDataDF["季度"] == str(start_season))]
             getStockData_LastYear=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year-1)) & (self.StockDataDF["季度"] == str(start_season))]
             getStockPriceData=self.StockPriceDF[ ( self.StockPriceDF["股號"]==coid ) & ( self.StockPriceDF["收盤日"] == self.Date )]
             recent_EPS=0.0
-            name=local_csvdfNameData.iloc[0]["名稱"]
+            try:
+                name=getStockPriceData.iloc[0]["公司縮寫"]
+            except IndexError:
+                sg.one_line_progress_meter('從資料中抓取變數...',100,1,'calc',orientation='h')
+                sg.popup_error('獲取股價資料表中的公司縮寫時發生錯誤\n請確定是否有抓取今日股價資訊！','讀取錯誤！')
+                return False
             A1=getStockData_StartTime.iloc[0]["A1"]
             A2=getStockData_StartTime.iloc[0]["A2"]
             A3=getStockData_StartTime.iloc[0]["A3"]
@@ -878,22 +904,25 @@ class MongoDB_Load():
 
     def init_calc(self,FormulaType):
         coid_list=[]
-        self.load_MixData()
-        self.calcAnsDF=DataFrame()
-        self.calcDataDF=DataFrame()
-        self.tableType = FormulaType
-        #self.Date = datetime.today().strftime("%Y-%m-%d")
-        self.Date = "2021-02-23"
-        coid_list=self.StockDataDF["股號"].drop_duplicates().tolist()
-        self.db_Data_Newest_Year = self.StockDataDF["年份"].max()
-        self.db_Data_Newest_Season = self.StockDataDF.loc[self.StockDataDF["年份"]==self.db_Data_Newest_Year,"季度"].max()
-        print(f'年份：{self.db_Data_Newest_Year} 季度：{self.db_Data_Newest_Season}')
-        if(self.get_calc_Formula_var(coid_list)):
-            self.calc_Forumla(coid_list,FormulaType)
-            self.calcAnsDF.sort_values(by='答案',ascending=True)
-            self.tableDF = self.calcAnsDF
-            self.load_AnsTable()
-            return True
+        if(self.load_MixData()):
+            self.calcAnsDF=DataFrame()
+            self.calcDataDF=DataFrame()
+            self.tableType = FormulaType
+            #
+            #self.Date = "2021-02-23"
+            coid_list=self.StockDataDF["股號"].drop_duplicates().tolist()
+            self.db_Data_Newest_Year = self.StockDataDF["年份"].max()
+            self.db_Data_Newest_Season = self.StockDataDF.loc[self.StockDataDF["年份"]==self.db_Data_Newest_Year,"季度"].max()
+            print(f'年份：{self.db_Data_Newest_Year} 季度：{self.db_Data_Newest_Season}')
+            if(self.get_calc_Formula_var(coid_list)):
+                self.calc_Forumla(coid_list,FormulaType)
+                self.calcAnsDF.sort_values(by='答案',ascending=True)
+                self.tableDF = self.calcAnsDF
+                self.load_AnsTable()
+                return True
+            else:
+                sg.popup_error('讀取時發生意外！已中斷操作！')
+                main_Window.normal()
     def load_AnsTable(self):
         self.update_TableData()
         pass
@@ -952,8 +981,7 @@ class MongoDB_Load():
         return True
 
     def load_MixData(self):
-        self.load_StockData()
-        self.load_StockPriceData()
+        return self.load_StockData() and self.load_StockPriceData()
         pass
 
     def load_StockData(self):
@@ -974,6 +1002,7 @@ class MongoDB_Load():
         
 
     def init_MongoDB(self):
+        self.Date = datetime.today().strftime("%Y-%m-%d")
         self.mongoDB_DBName = conf.get('MongoDB', 'DBNAME')
         self.mongoDB_CData = conf.get('MongoDB', 'CDATANAME')
         self.update_TableData()
@@ -1001,8 +1030,7 @@ class MongoDB_Load():
             [sg.Table(values=self.table_List, auto_size_columns=False, def_col_width=10,justification="left",
                       headings=self.table_Heading, num_rows=min(30,len(self.table_List)), select_mode="extended",
                       enable_events=True, key='display_Table', bind_return_key=True, vertical_scroll_only=False)],
-            [sg.Text('過濾條件\t'), sg.Text('年份'), sg.Combo(self.year_filter_list, default_value='全部', k='Combo_Year', size=(6, 1),readonly=True), sg.Text('季度'), sg.Combo(
-                self.season_filter_list, default_value='全部', k='Combo_Season', size=(6, 1),readonly=True,enable_events=True), sg.Text('過濾數值'), sg.Input(k='Input_Filter', size=(35, 1))],
+            [sg.Text('過濾條件\t'), sg.Text('過濾數值'), sg.Input(k='Input_Filter', size=(35, 1),enable_events=True)],
             [sg.Text('排序資料'), sg.Combo(self.table_Heading, default_value=self.table_Heading[0], k='Order_Data_1', size=(10, 1),readonly=True,enable_events=True),sg.Combo(self.table_Heading, default_value=self.table_Heading[1], k='Order_Data_2', size=(10, 1),readonly=True,enable_events=True)],
             [sg.Text('順序類型'), sg.Combo(['由大到小', '由小到大'], default_value='由大到小', k='Order_Type_1', size=(
                 10, 1),readonly=True,enable_events=True),sg.Combo(['由大到小', '由小到大'], default_value='由大到小', k='Order_Type_2', size=(
@@ -1250,6 +1278,14 @@ while True:  # 監控視窗回傳
             sg.popup('股票資訊爬蟲\n版本： 1.0\n作者：Douggy Sans\n2021年編寫', title='關於')
 
     if window == displayDB_Window:
+
+        if event == "Input_Filter":
+            Order_Data=[str(values['Order_Data_1']),str(values['Order_Data_2'])]
+            MDB_Load.sort_table(Order_Data,str(values['Order_Type_1']),str(values['Order_Type_2']))
+            MDB_Load.filter_db_Table(values['Input_Filter'])
+
+        if event == "匯出":
+            MDB_Load.export_Table()
         if event in (sg.WIN_CLOSED, '關閉'):
             displayDB_Window.close()
             displayDB_Window = None
@@ -1258,6 +1294,7 @@ while True:  # 監控視窗回傳
         if event == "Order_Data_1" or event == "Order_Data_2"   or event == "Order_Type_1" or event == "Order_Type_2":
             Order_Data=[str(values['Order_Data_1']),str(values['Order_Data_2'])]
             MDB_Load.sort_table(Order_Data,str(values['Order_Type_1']),str(values['Order_Type_2']))
+            MDB_Load.filter_db_Table(values['Input_Filter'])
 
         if event == "查閱欄位變數":
             sg.popup(formula_Info,'公式變數參考，你可以變更公式時移動視窗來參考。',no_titlebar=True,grab_anywhere=True,non_blocking=True)           
