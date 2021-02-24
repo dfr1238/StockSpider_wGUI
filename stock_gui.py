@@ -677,64 +677,67 @@ class MongoDB_Load():
             recent_EPS=calc_VarData.iloc[0]["近四季 EPS"]
             if(ForumlaType=='公式一'):
                 return_FType=True
-                calc_block_1=0
+                calc_block_1=0.0
                 calc_block_1+=calc_VarData.iloc[0]["A1"]
                 calc_block_1+=calc_VarData.iloc[0]["A2"]
                 calc_block_1+=calc_VarData.iloc[0]["A3"]
                 calc_block_1+=calc_VarData.iloc[0]["A4"]
                 calc_block_1+=calc_VarData.iloc[0]["A5"]
                 calc_block_1-=calc_VarData.iloc[0]["A6"]
-                calc_block_2=0
+                calc_block_2=0.0
                 calc_block_2=calc_VarData.iloc[0]["A7"]
-                calc_block_2/=10
-                calc_block_3=calc_block_1/calc_block_2
+                calc_block_2/=float(10.0)
+                calc_block_2=round(calc_block_2,2)
+                calc_block_3=round(calc_block_1/calc_block_2,2)
                 calc_block_3-=calc_VarData.iloc[0]["股價"]
                 ans_block=calc_block_3
-                ans_block=round(ans_block,2)
+                ans_block=round(float(ans_block),2)
                 pass
             
             if(ForumlaType=='公式二'):
                 return_FType=True
-                calc_block_1=0
-                calc_block_1+=calc_VarData.iloc[0]["B4"]
+                calc_block_1=0.0
+                calc_block_1=calc_VarData.iloc[0]["B4"]
                 calc_block_1-=calc_VarData.iloc[0]["去年同期B4"]#
-                calc_block_2=0
+                calc_block_2=0.0
                 calc_block_2=calc_VarData.iloc[0]["去年同期B4"]#
-                calc_block_3=0
-                calc_block_3=calc_block_1/calc_block_2#
-                calc_block_4=0
-                calc_block_4=calc_block_3*100
+                calc_block_3=0.0
+                calc_block_3=round(calc_block_1/calc_block_2,2)#
+                calc_block_4=0.0
+                calc_block_4=calc_block_3**float(100.0)
+                calc_block_4=round(calc_block_4,2)
                 calc_block_4-=calc_VarData.iloc[0]["股價"]#
-                calc_block_5=0
-                calc_block_5=calc_block_4/calc_VarData.iloc[0]["近四季 EPS"]#
+                calc_block_5=0.0
+                calc_block_5=round(calc_block_4/calc_VarData.iloc[0]["近四季 EPS"],2)#
                 ans_block=calc_block_5
-                ans_block=round(ans_block,2)
+                ans_block=round(float(ans_block),2)
                 pass
 
             if(ForumlaType== '公式三'):
                 return_FType=True
-                calc_block_1=0
+                calc_block_1=0.0
                 calc_block_1=calc_VarData.iloc[0]["B2"]
                 calc_block_1-=calc_VarData.iloc[0]["去年同期B2"]#
-                calc_block_2=0
+                calc_block_2=0.0
                 calc_block_2=calc_VarData.iloc[0]["去年同期B2"]#
-                calc_block_3=0
-                calc_block_3=calc_block_1/calc_block_2#
-                calc_block_4=0
-                calc_block_4=calc_block_3*100
+                calc_block_3=0.0
+                calc_block_3=round(calc_block_1/calc_block_2,2)#
+                calc_block_4=0.0
+                calc_block_4=calc_block_3**float(100.0)
+                calc_block_4=float(calc_block_4)
                 calc_block_4-=calc_VarData.iloc[0]["股價"]#
-                calc_block_5=0
-                calc_block_5=calc_block_4/calc_VarData.iloc[0]["近四季 EPS"]#
+                calc_block_5=0.0
+                calc_block_5=round(calc_block_4/calc_VarData.iloc[0]["近四季 EPS"],2)#
                 ans_block=calc_block_5
-                ans_block=round(ans_block,2)
+                ans_block=round(float(ans_block),2)
                 pass
             if(ForumlaType == '公式四'):
                 return_FType=True
-                calc_block_1=0
+                calc_block_1=0.0
                 calc_block_1=calc_VarData.iloc[0]["B2"]
                 calc_block_1-=calc_VarData.iloc[0]["去年同期B2"]#
                 bool_block=calc_block_1 > 1
-                calc_block_2=0
+                calc_block_2=0.0
                 calc_block_2=calc_VarData.iloc[0]["B3"]
                 calc_block_2-=calc_VarData.iloc[0]["去年同期B3"]#
                 bool_block2=calc_block_2 < 1
@@ -743,7 +746,7 @@ class MongoDB_Load():
                 else:
                     continue
             if(ForumlaType == '公式五'):
-                calc_block_1=0
+                calc_block_1=0.0
                 calc_block_1=calc_VarData.iloc[0]["B2"]
                 calc_block_1-=calc_VarData.iloc[0]["去年同期B2"]#
                 bool_block=calc_block_1 > 1
@@ -763,7 +766,7 @@ class MongoDB_Load():
                     continue
                 pass
             dict= {"股號":str(coid),"名稱":name,"年份":str(start_year),"季度":str(start_season),"公式":ForumlaType,"答案":ans_block,"近四季 EPS":recent_EPS}
-            cols=['股號','名稱','年份','季度','公式','答案','近四季 EPS']
+            cols=['股號','名稱','年份','季度','答案','近四季 EPS']
             self.calcAnsDF = self.calcAnsDF.append(dict, ignore_index=True)
             self.calcAnsDF = self.calcAnsDF[cols]
             if(return_FType):
@@ -870,6 +873,7 @@ class MongoDB_Load():
             self.calcDataDF = self.calcDataDF[cols]
             print(f'當年當季資料：{getStockData_StartTime}\n去年同期資料：{getStockData_LastYear}\n今日股價：{Price}\n近四季EPS：{recent_EPS}')
         print(self.calcDataDF)
+        print(self.calcDataDF.dtypes)
         return True
 
     def init_calc(self,FormulaType):
@@ -878,8 +882,8 @@ class MongoDB_Load():
         self.calcAnsDF=DataFrame()
         self.calcDataDF=DataFrame()
         self.tableType = FormulaType
-        self.Date = datetime.today().strftime("%Y-%m-%d")
-        #self.Date = "2021-02-23"
+        #self.Date = datetime.today().strftime("%Y-%m-%d")
+        self.Date = "2021-02-23"
         coid_list=self.StockDataDF["股號"].drop_duplicates().tolist()
         self.db_Data_Newest_Year = self.StockDataDF["年份"].max()
         self.db_Data_Newest_Season = self.StockDataDF.loc[self.StockDataDF["年份"]==self.db_Data_Newest_Year,"季度"].max()
@@ -975,10 +979,9 @@ class MongoDB_Load():
         self.update_TableData()
         #self.load_StockDataTable()
 
-    def sort_table(self,key,order1,order2,order3):
+    def sort_table(self,key,order1,order2):
         order_com1=False
         order_com2=False
-        order_com3=False
         if (order1=='由大到小'):
             order_com1=False
         else:
@@ -987,12 +990,8 @@ class MongoDB_Load():
             order_com2=False
         else:
             order_com2=True
-        if (order3=='由大到小'):
-            order_com3=False
-        else:
-            order_com3=True
 
-        self.tableDF=self.tableDF.sort_values(by=key,ascending=[order_com1,order_com2,order_com3],axis=0)
+        self.tableDF=self.tableDF.sort_values(by=key,ascending=[order_com1,order_com2],axis=0)
         self.update_TableData()
         self.update_TableWithoutColChange()
         pass
@@ -1004,10 +1003,9 @@ class MongoDB_Load():
                       enable_events=True, key='display_Table', bind_return_key=True, vertical_scroll_only=False)],
             [sg.Text('過濾條件\t'), sg.Text('年份'), sg.Combo(self.year_filter_list, default_value='全部', k='Combo_Year', size=(6, 1),readonly=True), sg.Text('季度'), sg.Combo(
                 self.season_filter_list, default_value='全部', k='Combo_Season', size=(6, 1),readonly=True,enable_events=True), sg.Text('過濾數值'), sg.Input(k='Input_Filter', size=(35, 1))],
-            [sg.Text('排序資料'), sg.Combo(self.table_Heading, default_value=self.table_Heading[0], k='Order_Data_1', size=(10, 1),readonly=True,enable_events=True),sg.Combo(self.table_Heading, default_value=self.table_Heading[1], k='Order_Data_2', size=(10, 1),readonly=True,enable_events=True),sg.Combo(self.table_Heading, default_value=self.table_Heading[2], k='Order_Data_3', size=(10, 1),readonly=True,enable_events=True)],
+            [sg.Text('排序資料'), sg.Combo(self.table_Heading, default_value=self.table_Heading[0], k='Order_Data_1', size=(10, 1),readonly=True,enable_events=True),sg.Combo(self.table_Heading, default_value=self.table_Heading[1], k='Order_Data_2', size=(10, 1),readonly=True,enable_events=True)],
             [sg.Text('順序類型'), sg.Combo(['由大到小', '由小到大'], default_value='由大到小', k='Order_Type_1', size=(
                 10, 1),readonly=True,enable_events=True),sg.Combo(['由大到小', '由小到大'], default_value='由大到小', k='Order_Type_2', size=(
-                10, 1),readonly=True,enable_events=True),sg.Combo(['由大到小', '由小到大'], default_value='由大到小', k='Order_Type_3', size=(
                 10, 1),readonly=True,enable_events=True)],
             [sg.Text('動作\t'), sg.Button('匯出'), sg.Button('關閉'),
              sg.Button('讀取財務報告'), sg.Button('讀取股價資料'),sg.Button(
@@ -1257,9 +1255,9 @@ while True:  # 監控視窗回傳
             displayDB_Window = None
             main_Window.normal()
 
-        if event == "Order_Data_1" or event == "Order_Data_2"  or event == "Order_Data_3" or event == "Order_Type_1" or event == "Order_Type_2" or event == "Order_Type_3":
-            Order_Data=[str(values['Order_Data_1']),str(values['Order_Data_2']),str(values['Order_Data_3'])]
-            MDB_Load.sort_table(Order_Data,str(values['Order_Type_1']),str(values['Order_Type_2']),str(values['Order_Type_3']))
+        if event == "Order_Data_1" or event == "Order_Data_2"   or event == "Order_Type_1" or event == "Order_Type_2":
+            Order_Data=[str(values['Order_Data_1']),str(values['Order_Data_2'])]
+            MDB_Load.sort_table(Order_Data,str(values['Order_Type_1']),str(values['Order_Type_2']))
 
         if event == "查閱欄位變數":
             sg.popup(formula_Info,'公式變數參考，你可以變更公式時移動視窗來參考。',no_titlebar=True,grab_anywhere=True,non_blocking=True)           
