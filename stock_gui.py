@@ -9,6 +9,7 @@ from math import ceil as math_ceil, nan
 import pathlib
 
 import numpy as np
+from pandas.io.parsers import count_empty_vals
 
 import pymongo
 import PySimpleGUI as sg
@@ -629,6 +630,7 @@ def local_CSV_Import_usercsvfile():  # 選擇外部股號表檔案
 
 
 class MongoDB_Load():
+    is_calcDataDF_Ready=False
     global DBClient, DB_LIST, CODATA_LIST, year_List, season_List
     default_dict={'測試欄位':['測試資料'],'測試欄位2':['測試資料'],'測試欄位3':['測試資料']}
     tableDF=DataFrame(data=default_dict)
@@ -692,95 +694,83 @@ class MongoDB_Load():
             return_FType=False
             current_process+=1
             ans_block=0
-            sg.one_line_progress_meter('計算資料..',current_process,coid_list_max,'calc',orientation='h')
+            not_manual_cancel = sg.one_line_progress_meter('計算資料..',current_process,coid_list_max,'calc',orientation='h')
+            if(not not_manual_cancel and current_process < coid_list_max):
+                Button = sg.popup_yes_no('確定取消？',title='手動取消')
+                if(Button=='Yes'):
+                    sg.popup_ok('已手動取消！')
+                    main_Window.normal()
+                    return False
             calc_VarData=self.calcDataDF[(self.calcDataDF["股號"]==coid) & (self.calcDataDF["年份"] == str(start_year)) & (self.calcDataDF["季度"] == str(start_season))]
+            calc_VarData = calc_VarData.reset_index(drop=True)
             name=calc_VarData.iloc[0]["名稱"]
             recent_EPS=calc_VarData.iloc[0]["近四季 EPS"]
             if(ForumlaType=='公式一'):
                 return_FType=True
-                calc_block_1=0.0
-                calc_block_1+=calc_VarData.iloc[0]["A1"]
-                calc_block_1+=calc_VarData.iloc[0]["A2"]
-                calc_block_1+=calc_VarData.iloc[0]["A3"]
-                calc_block_1+=calc_VarData.iloc[0]["A4"]
-                calc_block_1+=calc_VarData.iloc[0]["A5"]
-                calc_block_1-=calc_VarData.iloc[0]["A6"]
-                calc_block_2=0.0
-                calc_block_2=calc_VarData.iloc[0]["A7"]
-                calc_block_2/=float(10.0)
-                calc_block_2=round(calc_block_2,2)
-                calc_block_3=round(calc_block_1/calc_block_2,2)
-                calc_block_3-=calc_VarData.iloc[0]["股價"]
-                ans_block=calc_block_3
-                ans_block=round(float(ans_block),2)
+                A1=calc_VarData.iloc[0]["A1"]
+                A2=calc_VarData.iloc[0]["A2"]
+                A3=calc_VarData.iloc[0]["A3"]
+                A4=calc_VarData.iloc[0]["A4"]
+                A5=calc_VarData.iloc[0]["A5"]
+                A6=calc_VarData.iloc[0]["A6"]
+                A7=calc_VarData.iloc[0]["A7"]
+                if(A7 == 0.00):
+                    continue
+                Price=calc_VarData.iloc[0]["股價"]
+                ans_block=round((((A1+A2+A3+A4+A5)-A6)/(A7/10.00)-Price),2)
                 pass
             
             if(ForumlaType=='公式二'):
                 return_FType=True
-                calc_block_1=0.0
-                calc_block_1=calc_VarData.iloc[0]["B4"]
-                calc_block_1-=calc_VarData.iloc[0]["去年同期B4"]#
-                calc_block_2=0.0
-                calc_block_2=calc_VarData.iloc[0]["去年同期B4"]#
-                calc_block_3=0.0
-                calc_block_3=round(calc_block_1/calc_block_2,2)#
-                calc_block_4=0.0
-                calc_block_4=calc_block_3**float(100.0)
-                calc_block_4=round(calc_block_4,2)
-                calc_block_4-=calc_VarData.iloc[0]["股價"]#
-                calc_block_5=0.0
-                calc_block_5=round(calc_block_4/calc_VarData.iloc[0]["近四季 EPS"],2)#
-                ans_block=calc_block_5
-                ans_block=round(float(ans_block),2)
+                B4=calc_VarData.iloc[0]["B4"]
+                LastYear_B4=calc_VarData.iloc[0]["去年同期B4"]
+                Price=calc_VarData.iloc[0]["股價"]
+                r_EPS=calc_VarData.iloc[0]["近四季 EPS"]
+                if(LastYear_B4 == 0.00 or r_EPS == 0.00):
+                    continue
+
+                ans_block=round((((B4-LastYear_B4)/LastYear_B4)*100.0-Price/r_EPS),2)
                 pass
 
             if(ForumlaType== '公式三'):
                 return_FType=True
-                calc_block_1=0.0
-                calc_block_1=calc_VarData.iloc[0]["B2"]
-                calc_block_1-=calc_VarData.iloc[0]["去年同期B2"]#
-                calc_block_2=0.0
-                calc_block_2=calc_VarData.iloc[0]["去年同期B2"]#
-                calc_block_3=0.0
-                calc_block_3=round(calc_block_1/calc_block_2,2)#
-                calc_block_4=0.0
-                calc_block_4=calc_block_3**float(100.0)
-                calc_block_4=float(calc_block_4)
-                calc_block_4-=calc_VarData.iloc[0]["股價"]#
-                calc_block_5=0.0
-                calc_block_5=round(calc_block_4/calc_VarData.iloc[0]["近四季 EPS"],2)#
-                ans_block=calc_block_5
-                ans_block=round(float(ans_block),2)
+                B2=calc_VarData.iloc[0]["B2"]
+                LastYear_B2=calc_VarData.iloc[0]["去年同期B2"]
+                Price=calc_VarData.iloc[0]["股價"]
+                r_EPS=calc_VarData.iloc[0]["近四季 EPS"]
+                if(LastYear_B2 == 0.00 or r_EPS == 0.00):
+                    continue
+                ans_block=round((((B2-LastYear_B2)/LastYear_B2)*100.00-Price/r_EPS),2)
                 pass
             if(ForumlaType == '公式四'):
                 return_FType=True
-                calc_block_1=0.0
+                calc_block_1=0.00
                 calc_block_1=calc_VarData.iloc[0]["B2"]
-                calc_block_1-=calc_VarData.iloc[0]["去年同期B2"]#
-                bool_block=calc_block_1 > 1
-                calc_block_2=0.0
+                calc_block_1-=calc_VarData.iloc[0]["去年同期B2"]
+                bool_block=calc_block_1 > 1.00
+                calc_block_2=0.00
                 calc_block_2=calc_VarData.iloc[0]["B3"]
-                calc_block_2-=calc_VarData.iloc[0]["去年同期B3"]#
-                bool_block2=calc_block_2 < 1
+                calc_block_2-=calc_VarData.iloc[0]["去年同期B3"]
+                bool_block2=calc_block_2 < 1.00
                 if(bool_block and bool_block2):
                     ans_block='符合'
                 else:
                     continue
             if(ForumlaType == '公式五'):
-                calc_block_1=0.0
+                calc_block_1=0.00
                 calc_block_1=calc_VarData.iloc[0]["B2"]
-                calc_block_1-=calc_VarData.iloc[0]["去年同期B2"]#
-                bool_block=calc_block_1 > 1
+                calc_block_1-=calc_VarData.iloc[0]["去年同期B2"]
+                bool_block=calc_block_1 > 1.00
                 if(bool_block):
                     ans_block='符合'
                 else:
                     continue
                 pass
             if(ForumlaType == '公式六'):
-                calc_block_1=0
+                calc_block_1=0.00
                 calc_block_1=calc_VarData.iloc[0]["B3"]
-                calc_block_1-=calc_VarData.iloc[0]["去年同期B3"]#
-                bool_block=calc_block_1 < 1
+                calc_block_1-=calc_VarData.iloc[0]["去年同期B3"]
+                bool_block=calc_block_1 < 1.00
                 if(bool_block):
                     ans_block='符合'
                 else:
@@ -792,11 +782,15 @@ class MongoDB_Load():
             self.calcAnsDF = self.calcAnsDF[cols]
             self.calcAnsDF = self.calcAnsDF.replace([np.inf, -np.inf], np.nan).dropna(axis=0)
             if(return_FType):
-                print(self.calcAnsDF.dtypes)
-            print(self.calcAnsDF)
-        pass
+                pass
+                #print(self.calcAnsDF.dtypes)
+            #print(self.calcAnsDF)
+        return True
+
     def get_calc_Formula_var(self,coid_list):
-        print(coid_list)
+        if(self.is_calcDataDF_Ready):
+            return True
+        #print(coid_list)
         start_year=int(self.db_Data_Newest_Year)
         start_season=int(self.db_Data_Newest_Season)
         run_year=start_year
@@ -806,8 +800,15 @@ class MongoDB_Load():
         current_process=0
         coid_list_max=len(coid_list)
         for coid in coid_list: #目前股號
+            #print(coid)
             current_process+=1
-            sg.one_line_progress_meter('從資料中抓取變數...',current_process,coid_list_max,'calc',orientation='h')
+            not_manual_cancel = sg.one_line_progress_meter('從資料中抓取變數...',current_process,coid_list_max,'calc',orientation='h')
+            if(not not_manual_cancel and current_process < coid_list_max):
+                Button = sg.popup_yes_no('確定取消？',title='手動取消')
+                if(Button=='Yes'):
+                    sg.popup_ok('已手動取消！')
+                    main_Window.normal()
+                    return False
             global local_csvdf
             run_year=start_year
             count_Season=1
@@ -816,12 +817,19 @@ class MongoDB_Load():
             getStockData_LastYear=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year-1)) & (self.StockDataDF["季度"] == str(start_season))]
             getStockPriceData=self.StockPriceDF[ ( self.StockPriceDF["股號"]==coid ) & ( self.StockPriceDF["收盤日"] == self.Date )]
             recent_EPS=0.0
+            getStockData_StartTime = getStockData_StartTime.reset_index(drop=True)
+            getStockData_LastYear = getStockData_LastYear.reset_index(drop=True)
+            getStockPriceData = getStockPriceData.reset_index(drop=True)
+            try:
+                TEST=getStockData_LastYear.iloc[0]["B3"]
+            except IndexError:
+                sg.Print(f'抓不到股號 {coid} 在 {start_year-1} 之第 {start_season} 季度中的資料，請確定是否有抓取該年該季的資料！')
+                continue
             try:
                 name=getStockPriceData.iloc[0]["公司縮寫"]
             except IndexError:
-                sg.one_line_progress_meter('從資料中抓取變數...',100,1,'calc',orientation='h')
-                sg.popup_error('獲取股價資料表中的公司縮寫時發生錯誤\n請確定是否有抓取今日股價資訊！','讀取錯誤！')
-                return False
+                sg.Print(f'抓不到 {coid} 在 {self.Date}的股價資料！')
+                continue
             A1=getStockData_StartTime.iloc[0]["A1"]
             A2=getStockData_StartTime.iloc[0]["A2"]
             A3=getStockData_StartTime.iloc[0]["A3"]
@@ -840,59 +848,77 @@ class MongoDB_Load():
                 B4=getStockData_StartTime.iloc[0]["B4"]
                 last_year_B4=getStockData_LastYear.iloc[0]["B4"]
             else:
+                temp_S1_S3_SUM=0.0
                 B4=getStockData_StartTime.iloc[0]["B4"]
                 last_year_B4=getStockData_LastYear.iloc[0]["B4"]
                 #print('年',run_year,'季度',run_season)
-                for season in range(3,0,-1):
-                    temp_S1_S3_SUM=0.0
+                for season in range(3,0,-1): #今年
                     temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year)) & (self.StockDataDF["季度"] == str(season))]
+                    temp_StockData = temp_StockData.reset_index(drop=True)
                     temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
                 #print(temp_S1_S3_SUM)
                 B4-=temp_S1_S3_SUM
                 B4=round(B4,2)
                 temp_S1_S3_SUM=0.0
                 #print('年',run_year,'季度',run_season)
-                for season in range(3,0,-1):
+                for season in range(3,0,-1): #去年
                     temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year-1)) & (self.StockDataDF["季度"] == str(season))]
+                    temp_StockData = temp_StockData.reset_index(drop=True)
                     temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
                 last_year_B4-=temp_S1_S3_SUM
                 last_year_B4=round(last_year_B4,2)
             try:
                 Price=getStockPriceData.iloc[0]["收盤價"]
             except IndexError:
+                sg.Print(f'抓不到 {coid} 的收盤價，請確認股價資料的正確性，必要時請更新本地股號表！')
                 Price=0.0
+            is_run_season_exist=True
             while run_year >= end_year: #目前年份
+                temp_S1_S3_SUM=0.0
                 if(count_Season > 4):
                     #print('Out Year')
                     break
                 while run_season >= 1 and count_Season <= 4: #目前季度
-                        #print(f'COID: {coid} RUNY: {run_year} RUNS : {run_season} countS: {count_Season}')
-                        getStockData_PerSeason=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(run_year)) & (self.StockDataDF["季度"] == str(run_season))]
-                        if(run_season!=4):
-                            recent_EPS+=getStockData_PerSeason.iloc[0]["B4"]
-                            #print('近四季',recent_EPS)
-                        else:
-                            #print('年',run_year,'季度',run_season)
-                            temp_S1_S3_SUM=0.0
-                            for season in range(3,0,-1):
-                                temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(run_year)) & (self.StockDataDF["季度"] == str(season))]
+                    #print(f'COID: {coid} RUNY: {run_year} RUNS : {run_season} countS: {count_Season}')
+                    getStockData_PerSeason=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(run_year)) & (self.StockDataDF["季度"] == str(run_season))]
+                    getStockData_PerSeason = getStockData_PerSeason.reset_index(drop=True)
+                    if(run_season!=4):
+                        recent_EPS+=getStockData_PerSeason.iloc[0]["B4"]
+                        #print('近四季',recent_EPS)
+                    else:
+                        #print('年',run_year,'季度',run_season)
+                        for season in range(3,0,-1):
+                            temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(run_year)) & (self.StockDataDF["季度"] == str(season))]
+                            temp_StockData = temp_StockData.reset_index(drop=True)
+                            print(f'年份： {run_year} 季度: {season}')
+                            print(temp_StockData)
+                            try:
                                 temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
-                                #print(temp_S1_S3_SUM)
-                            
-                            S4_EPS=round(getStockData_PerSeason.iloc[0]["B4"],2)
-                            #print('第四季EPS',S4_EPS)
-                            #print('前三季總和',temp_S1_S3_SUM)
-                            S4_EPS-=temp_S1_S3_SUM
-                            #print('第四季EPS-前三季EPS',round(S4_EPS,2))
-                            recent_EPS+=round(S4_EPS,2)
-                            recent_EPS=round(recent_EPS,2)
-                            print('近四季',recent_EPS)
-                        run_season-=1
-                        count_Season+=1
-                        #print(f'{getStockData_PerSeason}')
+                            except IndexError:
+                                sg.Print(f'在讀入 {coid} 股號時之 {run_year} 年的第 {run_season} 季度時發生錯誤\n請確定有抓取該股號當年的第 {season} 季度的財務報告！')
+                                is_run_season_exist=False
+                                break
+                            #print(temp_S1_S3_SUM)
+                        if(not(is_run_season_exist)):
+                            break
+                    if(not(is_run_season_exist)):
+                        break
+                    S4_EPS=round(getStockData_PerSeason.iloc[0]["B4"],2)
+                    #print('第四季EPS',S4_EPS)
+                    #print('前三季總和',temp_S1_S3_SUM)
+                    S4_EPS-=temp_S1_S3_SUM
+                    #print('第四季EPS-前三季EPS',round(S4_EPS,2))
+                    recent_EPS+=round(S4_EPS,2)
+                    recent_EPS=round(recent_EPS,2)
+                    print('近四季',recent_EPS)
+                    run_season-=1
+                    count_Season+=1
+                    #print(f'{getStockData_PerSeason}')
                 run_season=4
                 run_year-=1
                 #print('Out Season')
+            if(not(is_run_season_exist)):
+                 continue
             dict={'股號':str(coid),'名稱':name,'年份':str(self.db_Data_Newest_Year),'季度':str(self.db_Data_Newest_Season),'A1':A1,'A2':A2,'A3':A3,'A4':A4,'A5':A5,'A6':A6,'A7':A7,'B1':B1,'B2':B2,'B3':B3,'B4':B4,'去年同期B2':last_year_B2,'去年同期B4':last_year_B4,'去年同期B3':last_year_B3,'股價':Price,'近四季 EPS':recent_EPS}
             self.calcDataDF = self.calcDataDF.append(dict, ignore_index=True,sort=False)
             cols=['股號','名稱','年份','季度','A1','A2','A3','A4','A5','A6','A7','B1','B2','B3','B4','去年同期B2','去年同期B3','去年同期B4','股價','近四季 EPS']
@@ -900,26 +926,33 @@ class MongoDB_Load():
             print(f'當年當季資料：{getStockData_StartTime}\n去年同期資料：{getStockData_LastYear}\n今日股價：{Price}\n近四季EPS：{recent_EPS}')
         print(self.calcDataDF)
         print(self.calcDataDF.dtypes)
+        self.is_calcDataDF_Ready=True
         return True
 
     def init_calc(self,FormulaType):
         coid_list=[]
-        if(self.load_MixData()):
+        if(self.load_MixData(True)):
+            if(not(self.is_calcDataDF_Ready,True)):
+                self.calcDataDF=DataFrame()
             self.calcAnsDF=DataFrame()
-            self.calcDataDF=DataFrame()
             self.tableType = FormulaType
-            #
+            self.Date = datetime.today().strftime("%Y-%m-%d")
             #self.Date = "2021-02-23"
             coid_list=self.StockDataDF["股號"].drop_duplicates().tolist()
             self.db_Data_Newest_Year = self.StockDataDF["年份"].max()
             self.db_Data_Newest_Season = self.StockDataDF.loc[self.StockDataDF["年份"]==self.db_Data_Newest_Year,"季度"].max()
             print(f'年份：{self.db_Data_Newest_Year} 季度：{self.db_Data_Newest_Season}')
             if(self.get_calc_Formula_var(coid_list)):
-                self.calc_Forumla(coid_list,FormulaType)
-                self.calcAnsDF.sort_values(by='答案',ascending=True)
-                self.tableDF = self.calcAnsDF
-                self.load_AnsTable()
-                return True
+                coid_list=self.calcDataDF["股號"].drop_duplicates().tolist()
+                if(self.calc_Forumla(coid_list,FormulaType)):
+                    print('True')
+                    self.calcAnsDF.sort_values(by='答案',ascending=True)
+                    self.tableDF = self.calcAnsDF
+                    self.load_AnsTable()
+                    return True
+                else:
+                    sg.popup_error('讀取時發生意外！已中斷操作！')
+                    main_Window.normal()
             else:
                 sg.popup_error('讀取時發生意外！已中斷操作！')
                 main_Window.normal()
@@ -959,14 +992,21 @@ class MongoDB_Load():
         max_process=self.codata.count_documents(filter=query)
         for prt in self.codata.find(query, query_slot):
             current_process+=1
-            sg.one_line_progress_meter('從資料庫讀入資料..',current_process,max_process,'calc',orientation='h')
+            not_manual_cancel = sg.one_line_progress_meter('從資料庫讀入資料..',current_process,max_process,'calc',orientation='h')
+            if(not not_manual_cancel and current_process < max_process):
+                Button = sg.popup_yes_no('確定取消？',title='手動取消')
+                if(Button=='Yes'):
+                    sg.popup_ok('已手動取消！')
+                    return False
             temp_list.append(prt)
         self.tableDF=DataFrame(temp_list)
+        return True
 
     def load_StockPriceData(self):
         query_slot = {"_id": 0,"DATA_TYPE":0} #過濾輸出query
         query = {"DATA_TYPE": "股價資料"} #過濾搜尋query
-        self.load_from_DB(query_slot,query)
+        if(not self.load_from_DB(query_slot,query)):
+            return False
         try:
             self.tableDF=self.tableDF[['CO_ID','SYear','SDate','CO_SHORT_NAME','Price','SUB_DATA_TYPE']]
         except KeyError:
@@ -980,8 +1020,11 @@ class MongoDB_Load():
         print(self.StockPriceDF)
         return True
 
-    def load_MixData(self):
-        return self.load_StockData() and self.load_StockPriceData()
+    def load_MixData(self,isCalc):
+        if(self.is_calcDataDF_Ready and isCalc):
+            return True
+        else:
+            return (self.load_StockData() and self.load_StockPriceData())
         pass
 
     def load_StockData(self):
