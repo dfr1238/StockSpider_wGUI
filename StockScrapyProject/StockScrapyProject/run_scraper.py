@@ -4,8 +4,6 @@ from scrapy.crawler import CrawlerProcess, CrawlerRunner
 from scrapy.utils.project import get_project_settings
 import os
 from twisted.internet import reactor
-from twisted.names import client
-from multiprocessing import Process, Queue
 
 class Scraper:
     def __init__(self):
@@ -24,11 +22,13 @@ class Scraper:
         self.runner  = CrawlerRunner(setting)
 
     def set_PriceSpider(self,CSV=''):
-        d = self.runner.crawl(stockPriceSpider,CSV_File_PATH=CSV)
-        d.addBoth(lambda _: reactor.stop())
+        self.process.crawl(stockPriceSpider,CSV_File_PATH=CSV)
+        #d = self.runner.crawl(stockPriceSpider,CSV_File_PATH=CSV)
+        #d.addBoth(lambda _: reactor.stop())
     
     def run_PriceSpider(self):
-        reactor.run()
+        self.process.start()
+        #reactor.run()
 
     def set_StockSpider(self,Year='',Season='',CSV='',Mode='',CO_ID='', **kwargs):
         d = self.runner.crawl(StockSpider,Year=Year,Season=Season,CSV=CSV,Mode=Mode,CO_ID=CO_ID)
