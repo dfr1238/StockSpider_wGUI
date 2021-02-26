@@ -10,7 +10,16 @@ from pydispatch import dispatcher
 from scrapy import signals
 import time
 from ..items import StockPrice_items
+import scrapy.utils.misc
+import scrapy.core.scraper
+from scrapy.exceptions import CloseSpider
 
+def warn_on_generator_with_return_value_stub(spider, callable):
+    pass
+
+scrapy.utils.misc.warn_on_generator_with_return_value = warn_on_generator_with_return_value_stub
+scrapy.core.scraper.warn_on_generator_with_return_value = warn_on_generator_with_return_value_stub
+#Credit: https://github.com/pyinstaller/pyinstaller/issues/4815#issuecomment-757386302
 
 class stockPriceSpider(scrapy.Spider):
     Type = '股價資料'
@@ -76,7 +85,7 @@ class stockPriceSpider(scrapy.Spider):
             filename = f'.\{dt_string} -股價資料- {self.Date} 中未存在股號.csv'
             df.to_csv(filename, index=False)
             print(f'已匯出未存在的股號至{filename}')
-            sg.SystemTray.notify(f'已匯出未存在的股號至\n{filename}')
+            sg.SystemTray.notify('股價資料爬蟲',f'已匯出未存在的股號至\n{filename}')
         else:
             print('無缺漏股號。')
 
@@ -120,7 +129,7 @@ class stockPriceSpider(scrapy.Spider):
 
     def check_se_parse(self, response):
         title = '正在線上檢查今日證券交換所是否開盤...'
-        sg.SystemTray.notify(title, '', display_duration_in_ms=300, fade_in_duration=.2)
+        sg.SystemTray.notify('股價資料爬蟲',title, display_duration_in_ms=300, fade_in_duration=.2)
         domain = urlParse.urlparse(response.url).hostname
         print('線上檢查今日證券交換所是否開盤...')
         print(f'網域：{domain}')
@@ -145,7 +154,7 @@ class stockPriceSpider(scrapy.Spider):
             self.se_status = 'TPEX未收盤，TWSE已收盤'
         else:
             self.se_status = 'TWSE與TPEX未收盤'
-        sg.SystemTray.notify(self.se_status, '', display_duration_in_ms=300, fade_in_duration=.2)
+        sg.SystemTray.notify('股價資料爬蟲',self.se_status, display_duration_in_ms=300, fade_in_duration=.2)
         if(self.is_TPEX_open and self.is_TPEX_open):
             yield scrapy.Request(self.se_urls[1], callback=self.twse_mining_Data_Parse, dont_filter=True)
 
@@ -163,8 +172,12 @@ class stockPriceSpider(scrapy.Spider):
             print(local_Co_ids)
 
             for co_id in local_Co_ids:
-                self.current+=1
-                self.not_mamual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.isExist,'Stock','運行時請勿點擊視窗，顯示沒有回應請勿關閉，為正常現象。\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
+                self.not_manual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.isExist,'Stock','運行時請勿點擊視窗，顯示沒有回應請勿關閉，為正常現象。\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
+                if(not self.not_manual_cancel and self.current < self.exist-1):
+                    Button = sg.popup_yes_no('是否取消？','取消爬取')
+                    if(Button=='Yes'):
+                        sg.popup('已手動取消！')
+                        raise CloseSpider("使用者取消！")
                 items = StockPrice_items()
                 print('First RUN:', self.TWSE_First_Run)
                 print(co_id)
@@ -185,6 +198,7 @@ class stockPriceSpider(scrapy.Spider):
                         continue
                 else:
                     print('TPEX GET ITEMS')
+                    self.current+=1
                     tpex_price = str(data.xpath(
                         f'//td[text()="{co_id}"]/following-sibling::td[2]//text()').get())
                     tpex_price = tpex_price.replace(',', '')
@@ -219,8 +233,12 @@ class stockPriceSpider(scrapy.Spider):
                 print(f'網域：{domain}')
 
                 for co_id in local_Co_ids:
-                    self.current+=1
-                    self.not_mamual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.isExist,'Stock','運行時請勿點擊視窗，顯示沒有回應請勿關閉，為正常現象。\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
+                    self.not_manual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.isExist-1,'Stock','運行時請勿點擊視窗，顯示沒有回應請勿關閉，為正常現象。\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
+                    if(not self.not_manual_cancel and self.current < self.exist-1):
+                        Button = sg.popup_yes_no('是否取消？','取消爬取')
+                        if(Button=='Yes'):
+                            sg.popup('已手動取消！')
+                            raise CloseSpider("使用者取消！")
                     items = StockPrice_items()
                     print('First RUN:', self.TWSE_First_Run)
                     print(co_id)
@@ -241,6 +259,7 @@ class stockPriceSpider(scrapy.Spider):
                             continue
                     else:
                         print('TWSE GET ITEMS')
+                        self.current+=1
                         twse_price = str(data.xpath(
                             f'//td[text()="{co_id}"]/following-sibling::td[6]//text()').get())
                         twse_price = twse_price.replace(',', '')
