@@ -3,13 +3,11 @@ import os
 import os.path as path
 import winsound
 from datetime import datetime
-from decimal import Decimal
-from math import ceil as math_ceil, nan
+from math import ceil as math_ceil
 
 import pathlib
 
 import numpy as np
-from pandas.io.parsers import count_empty_vals
 
 import pymongo
 import PySimpleGUI as sg
