@@ -1,7 +1,6 @@
 import configparser
 import os
 import os.path as path
-from typing import Tuple
 import winsound
 from datetime import datetime
 from math import ceil as math_ceil
@@ -716,7 +715,7 @@ class MongoDB_Load():
                     sg.popup_ok('已手動取消！')
                     main_Window.normal()
                     return False
-            calc_VarData=self.calcDataDF[(self.calcDataDF["股號"]==coid) & (self.calcDataDF["年份"] == str(start_year)) & (self.calcDataDF["季度"] == str(start_season))]
+            calc_VarData=self.calcDataDF[(self.calcDataDF["代號"]==coid) & (self.calcDataDF["年份"] == str(start_year)) & (self.calcDataDF["季度"] == str(start_season))]
             calc_VarData = calc_VarData.reset_index(drop=True)
             name=calc_VarData.iloc[0]["名稱"]
             recent_EPS=calc_VarData.iloc[0]["近四季 EPS"]
@@ -807,8 +806,8 @@ class MongoDB_Load():
                 else:
                     continue
                 pass
-            dict= {"股號":str(coid),"名稱":name,"年份":str(start_year),"季度":str(start_season),"公式":ForumlaType,"答案":ans_block,"近四季 EPS":recent_EPS}
-            cols=['股號','名稱','年份','季度','答案','近四季 EPS']
+            dict= {"代號":str(coid),"名稱":name,"年份":str(start_year),"季度":str(start_season),"公式":ForumlaType,"答案":ans_block,"近四季 EPS":recent_EPS}
+            cols=['代號','名稱','年份','季度','答案','近四季 EPS']
             self.calcAnsDF = self.calcAnsDF.append(dict, ignore_index=True)
             self.calcAnsDF = self.calcAnsDF[cols]
             self.calcAnsDF = self.calcAnsDF.replace([np.inf, -np.inf], np.nan).dropna(axis=0)
@@ -836,6 +835,7 @@ class MongoDB_Load():
         #print(coid_list)
         start_year=int(self.db_Data_Newest_Year)
         start_season=int(self.db_Data_Newest_Season)
+        print(f'{start_year}  {start_season}')
         run_year=start_year
         run_season=start_season
         end_year=start_year
@@ -856,13 +856,14 @@ class MongoDB_Load():
             run_year=start_year
             count_Season=1
             run_season=start_season
-            getStockData_StartTime=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year)) & (self.StockDataDF["季度"] == str(start_season))]
-            getStockData_LastYear=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year-1)) & (self.StockDataDF["季度"] == str(start_season))]
-            getStockPriceData=self.StockPriceDF[ ( self.StockPriceDF["股號"]==coid ) & ( self.StockPriceDF["收盤日"] == self.Date )]
+            getStockData_StartTime=self.StockDataDF[(self.StockDataDF["代號"]==coid) & (self.StockDataDF["年份"] == str(start_year)) & (self.StockDataDF["季度"] == str(start_season))]
+            getStockData_LastYear=self.StockDataDF[(self.StockDataDF["代號"]==coid) & (self.StockDataDF["年份"] == str(start_year-1)) & (self.StockDataDF["季度"] == str(start_season))]
+            getStockPriceData=self.StockPriceDF[ ( self.StockPriceDF["代號"]==coid ) & ( self.StockPriceDF["收盤日"] == self.Date )]
             recent_EPS=0.0
             getStockData_StartTime = getStockData_StartTime.reset_index(drop=True)
             getStockData_LastYear = getStockData_LastYear.reset_index(drop=True)
             getStockPriceData = getStockPriceData.reset_index(drop=True)
+            #print(f'{getStockData_StartTime} {getStockData_LastYear}')
             try:
                 TEST=getStockData_LastYear.iloc[0]["B3"]
             except IndexError:
@@ -873,7 +874,11 @@ class MongoDB_Load():
             except IndexError:
                 sg.Print(f'抓不到 {coid} 在 {self.Date}的股價資料！')
                 continue
-            A1=getStockData_StartTime.iloc[0]["A1"]
+            try:
+                A1=getStockData_StartTime.iloc[0]["A1"]
+            except IndexError:
+                sg.Print(f'抓不到 {coid} 在 {start_year} 年第 {start_season} 的A1資料！')
+                continue
             A2=getStockData_StartTime.iloc[0]["A2"]
             A3=getStockData_StartTime.iloc[0]["A3"]
             A4=getStockData_StartTime.iloc[0]["A4"]
@@ -893,27 +898,31 @@ class MongoDB_Load():
                 #print('B',getStockData_LastYear)
                 B4=getStockData_StartTime.iloc[0]["B4"]
                 last_year_B4=getStockData_LastYear.iloc[0]["B4"]
-                #print(f'{coid} - 今年季度B4：{B4} 去年為 {last_year_B4}')
+                print(f'{coid} - 今年季度B4：{B4} 去年為 {last_year_B4}')
             else: #第四季
                 temp_S1_S3_SUM=0.0
                 B4=getStockData_StartTime.iloc[0]["B4"]
                 last_year_B4=getStockData_LastYear.iloc[0]["B4"]
-                print('年',run_year,'季度',run_season)
+                #print('年',run_year,'季度',run_season)
                 for season in range(3,0,-1): #今年
-                    temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year)) & (self.StockDataDF["季度"] == str(season))]
+                    temp_StockData=self.StockDataDF[(self.StockDataDF["代號"]==coid) & (self.StockDataDF["年份"] == str(start_year)) & (self.StockDataDF["季度"] == str(season))]
                     temp_StockData = temp_StockData.reset_index(drop=True)
                     temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
-                print(temp_S1_S3_SUM)
+                #print(temp_S1_S3_SUM)
+                temp_S1_S3_SUM = round(temp_S1_S3_SUM,2)
                 B4-=temp_S1_S3_SUM
                 B4=round(B4,2)
                 temp_S1_S3_SUM=0.0
-                print('年',run_year,'季度',run_season)
+                #print(f'今年B4 {B4}')
+                #print('年',run_year,'季度',run_season)
                 for season in range(3,0,-1): #去年
-                    temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year-1)) & (self.StockDataDF["季度"] == str(season))]
+                    temp_StockData=self.StockDataDF[(self.StockDataDF["代號"]==coid) & (self.StockDataDF["年份"] == str(start_year-1)) & (self.StockDataDF["季度"] == str(season))]
                     temp_StockData = temp_StockData.reset_index(drop=True)
                     temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
+                temp_S1_S3_SUM = round(temp_S1_S3_SUM,2)
                 last_year_B4-=temp_S1_S3_SUM
                 last_year_B4=round(last_year_B4,2)
+                print(f'{coid} - 今年季度B4：{B4} 去年為 {last_year_B4}')
             try:
                 Price=getStockPriceData.iloc[0]["收盤價"]
             except IndexError:
@@ -923,27 +932,28 @@ class MongoDB_Load():
             temp_S1_S3_SUM=0.0
             while run_year >= end_year: #目前年份
                 if(count_Season > 4):
-                    print('Out Year')
+                    #print('Out Year')
                     break
                 while run_season >= 1 and count_Season <= 4: #目前季度
                     print(f'COID: {coid} RUNY: {run_year} RUNS : {run_season} countS: {count_Season}')
-                    getStockData_PerSeason=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(run_year)) & (self.StockDataDF["季度"] == str(run_season))]
+                    getStockData_PerSeason=self.StockDataDF[(self.StockDataDF["代號"]==coid) & (self.StockDataDF["年份"] == str(run_year)) & (self.StockDataDF["季度"] == str(run_season))]
                     getStockData_PerSeason = getStockData_PerSeason.reset_index(drop=True)
                     if(run_season!=4):
                         print(f'該季B4為{getStockData_PerSeason.iloc[0]["B4"]}')
                         recent_EPS+=getStockData_PerSeason.iloc[0]["B4"]
+                        recent_EPS = round(recent_EPS,2)
                         print(f'COID: {coid}正在加總近四季',recent_EPS)
                     else:
                         print('測到第四季度，年：',run_year,'季度：',run_season)
                         S4_EPS=getStockData_PerSeason.iloc[0]["B4"]
                         temp_StockData=''
                         for season in range(3,0,-1):
-                            temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(run_year)) & (self.StockDataDF["季度"] == str(season))]
+                            temp_StockData=self.StockDataDF[(self.StockDataDF["代號"]==coid) & (self.StockDataDF["年份"] == str(run_year)) & (self.StockDataDF["季度"] == str(season))]
                             temp_StockData = temp_StockData.reset_index(drop=True)
                             #print(temp_StockData)
                             try:
                                 temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
-                                print(f'年份： {run_year} 季度: {season} B4: {temp_StockData.iloc[0]["B4"]}')
+                                #print(f'年份： {run_year} 季度: {season} B4: {temp_StockData.iloc[0]["B4"]}')
                             except IndexError:
                                 sg.Print(f'在讀入 {coid} 股號時之 {run_year} 年的第 {run_season} 季度時發生錯誤\n請確定有抓取該股號當年的第 {season} 季度的財務報告！')
                                 is_run_season_exist=False
@@ -960,7 +970,7 @@ class MongoDB_Load():
                     if(not(is_run_season_exist)):
                         break
                     else:
-                        print('近四季',recent_EPS)
+                        #print('近四季',recent_EPS)
                         run_season-=1
                         count_Season+=1
                     #print(f'{getStockData_PerSeason}')
@@ -971,9 +981,9 @@ class MongoDB_Load():
                 #print('Out Season')
             if(not(is_run_season_exist)):
                  continue
-            dict={'股號':str(coid),'名稱':name,'年份':str(self.db_Data_Newest_Year),'季度':str(self.db_Data_Newest_Season),'A1':A1,'A2':A2,'A3':A3,'A4':A4,'A5':A5,'A5_5':A5_5,'A6':A6,'A7':A7,'B1':B1,'B2':B2,'B3':B3,'B4':B4,'去年同期B2':last_year_B2,'去年同期B4':last_year_B4,'去年同期B3':last_year_B3,'股價':Price,'近四季 EPS':recent_EPS}
+            dict={'代號':str(coid),'名稱':name,'年份':str(self.db_Data_Newest_Year),'季度':str(self.db_Data_Newest_Season),'A1':A1,'A2':A2,'A3':A3,'A4':A4,'A5':A5,'A5_5':A5_5,'A6':A6,'A7':A7,'B1':B1,'B2':B2,'B3':B3,'B4':B4,'去年同期B2':last_year_B2,'去年同期B4':last_year_B4,'去年同期B3':last_year_B3,'股價':Price,'近四季 EPS':recent_EPS}
             self.calcDataDF = self.calcDataDF.append(dict, ignore_index=True,sort=False)
-            cols=['股號','名稱','年份','季度','A1','A2','A3','A4','A5','A5_5','A6','A7','B1','B2','B3','B4','去年同期B2','去年同期B3','去年同期B4','股價','近四季 EPS']
+            cols=['代號','名稱','年份','季度','A1','A2','A3','A4','A5','A5_5','A6','A7','B1','B2','B3','B4','去年同期B2','去年同期B3','去年同期B4','股價','近四季 EPS']
             self.calcDataDF = self.calcDataDF[cols]
             #print(f'當年當季資料：{getStockData_StartTime}\n去年同期資料：{getStockData_LastYear}\n今日股價：{Price}\n近四季EPS：{recent_EPS}')
         print(self.calcDataDF)
@@ -989,13 +999,13 @@ class MongoDB_Load():
             self.calcAnsDF=DataFrame()
             self.Date = datetime.today().strftime("%Y-%m-%d")
             #self.Date = "2021-02-23"
-            coid_list=self.StockDataDF["股號"].drop_duplicates().tolist()
+            coid_list=self.StockDataDF["代號"].drop_duplicates().tolist()
             self.db_Data_Newest_Year = self.StockDataDF["年份"].max()
             self.db_Data_Newest_Season = self.StockDataDF.loc[self.StockDataDF["年份"]==self.db_Data_Newest_Year,"季度"].max()
             print(f'年份：{self.db_Data_Newest_Year} 季度：{self.db_Data_Newest_Season}')
             if(self.get_calc_Formula_var(coid_list)):
                 try:
-                    coid_list=self.calcDataDF["股號"].drop_duplicates().tolist()
+                    coid_list=self.calcDataDF["代號"].drop_duplicates().tolist()
                 except KeyError:
                     sg.popup_error('載入股價資料時發生錯誤，請確定是否抓取了今日股價資料！')
                     return False
@@ -1071,7 +1081,7 @@ class MongoDB_Load():
             return False
         self.tableType ='股價資料'
         self.clean_Data()
-        self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","SYear":"年份","SDate":"收盤日","CO_SHORT_NAME":"公司縮寫","Price":"收盤價","SUB_DATA_TYPE":"隸屬交易所"})
+        self.tableDF=self.tableDF.rename(columns={"CO_ID":"代號","SYear":"年份","SDate":"收盤日","CO_SHORT_NAME":"公司縮寫","Price":"收盤價","SUB_DATA_TYPE":"隸屬交易所"})
         #print(self.tableDF)
         self.tableDF=self.tableDF.dropna()
         self.StockPriceDF=self.tableDF
@@ -1096,7 +1106,7 @@ class MongoDB_Load():
             return False
         self.tableType = '財務報告'
         self.clean_Data() #清空列表
-        self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","SYear":"年份","SSeason":"季度","CO_FULL_NAME":"公司全名"})
+        self.tableDF=self.tableDF.rename(columns={"CO_ID":"代號","SYear":"年份","SSeason":"季度","CO_FULL_NAME":"公司全名"})
         self.tableDF=self.tableDF.dropna()
         print(self.tableDF)
         self.StockDataDF=self.tableDF
