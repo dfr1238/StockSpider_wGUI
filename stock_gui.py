@@ -1248,7 +1248,7 @@ def set_Setting_Window():  # 主視窗 -> 設定
     return sg.Window("程式設定", setting_Layout, margins=(10, 5), finalize=True, modal=True, disable_close=True, disable_minimize=True, no_titlebar=True)
 
 
-MDB_Load = MongoDB_Load()
+MDB_Load = None
 
 main_Window, setting_Window, aM_Window, local_Csv_Window, local_Csv_imode_Window = set_Main_Window(
 ), None, None, None, None
@@ -1262,6 +1262,7 @@ main_Window.bring_to_front()
 if(DB_READY):
     scrapyer.change_Project_Setting(str(conf.get('MongoDB', 'MONGO_URI')), str(
         conf.get('MongoDB', 'DBNAME')), str(conf.get('MongoDB', 'cdataname')))
+    MDB_Load = MongoDB_Load()
 
 print('主視窗載入完成。')
 while True:  # 監控視窗回傳
@@ -1315,6 +1316,10 @@ while True:  # 監控視窗回傳
         if event == "連接資料庫":
             window.close()
             connect_Mongo(False, False, False, True)
+            if(DB_READY):
+                MDB_Load = MongoDB_Load()
+                scrapyer.change_Project_Setting(str(conf.get('MongoDB', 'MONGO_URI')), str(
+                    conf.get('MongoDB', 'DBNAME')), str(conf.get('MongoDB', 'cdataname')))
             main_Window = None
             main_Window = set_Main_Window()
 
