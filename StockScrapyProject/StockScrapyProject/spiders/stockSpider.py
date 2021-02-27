@@ -58,7 +58,7 @@ class StockSpider(scrapy.Spider):
         self.info = (
             f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl}\n目前筆數:{self.current},確認存在股數:{self.exist}\n確認未存在股號數:{len(self.noExist)},待導入A類查尋筆數:{self.wait_url_A},爬取失敗的筆數:{len(self.cant_reach)}\n未存在的列表\n{self.noExist}\n爬取失敗的列表\n{self.cant_reach}")
         self.not_manual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.ready_crawl,'Stock','運行時請勿點擊視窗，顯示沒有回應請勿關閉，為正常現象。\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
-        if(not self.not_manual_cancel and self.current < self.exist+self.wait_url_A):
+        if(not self.not_manual_cancel and self.current < self.exist+self.wait_url_A_MAX):
             Button = sg.popup_yes_no('是否取消？','取消爬取')
             if(Button=='Yes'):
                 sg.popup('已手動取消！')
@@ -252,8 +252,9 @@ class StockSpider(scrapy.Spider):
                 logging.info("該股類型C無資料，轉入類型A查資料。")
                 self.wait_url_A += 1
                 self.wait_url_A_MAX+=1
-                self.start_urls.append(
-                    f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={company_Id[0]}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=A')
+                yield scrapy.Request(f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={company_Id[0]}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=A',dont_filter=True)
+                #self.start_urls.append(
+                    #f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={company_Id[0]}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=A')
                 pass
         if(_page_exist):
             self.current += 1
