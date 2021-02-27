@@ -27,6 +27,7 @@ class StockSpider(scrapy.Spider):
     start_urls = []
     noExist = []
     wait_url_A = 0
+    cant_reach = []
     import_csv = '..\上市_urlA.csv'
     total = 0
     ready_crawl = 0
@@ -55,8 +56,8 @@ class StockSpider(scrapy.Spider):
             title = "正常運算當中"
             logging.info("正常運算當中")
         self.info = (
-            f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl}\n目前筆數:{self.current},確認存在股數:{self.exist}\n確認未存在股號數:{len(self.noExist)},待導入A類查尋筆數:{self.wait_url_A}")
-        self.not_manual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.ready_crawl-1,'Stock','運行時請勿點擊視窗，顯示沒有回應請勿關閉，為正常現象。\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
+            f"CSV總筆數:{self.total},匯入有效筆數:{self.ready_crawl}\n目前筆數:{self.current},確認存在股數:{self.exist}\n確認未存在股號數:{len(self.noExist)},待導入A類查尋筆數:{self.wait_url_A},爬取失敗的筆數:{len(self.cant_reach)}\n未存在的列表\n{self.noExist}\n爬取失敗的列表\n{self.cant_reach}")
+        self.not_manual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.ready_crawl,'Stock','運行時請勿點擊視窗，顯示沒有回應請勿關閉，為正常現象。\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
         if(not self.not_manual_cancel and self.current < self.exist+self.wait_url_A):
             Button = sg.popup_yes_no('是否取消？','取消爬取')
             if(Button=='Yes'):
@@ -73,6 +74,8 @@ class StockSpider(scrapy.Spider):
             self.ready_crawl = 1
             self.start_urls.append(
                 f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={CO_ID}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=C')  # 帶入網址序列
+            self.start_urls.append(
+                f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={CO_ID}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=A')  # 帶入網址序列
         else:
             logging.error('請輸入正確的四位數純數字股號')
             pass
@@ -84,12 +87,23 @@ class StockSpider(scrapy.Spider):
             self.noExist = list(filter(None, self.noExist))
             dict = {'代號': self.noExist}
             df = DataFrame(dict)
-            filename = f'.\{dt_string} -財務報告- {self.Year} 年第 {self.Season} 季中未存在股號.csv'
+            filename = f'.\{dt_string} -財務報告- {self.Year} 年第 {self.Season} 季中未存在之股號.csv'
             df.to_csv(filename, index=False)
             print(f'已匯出未存在的股號至{filename}')
             sg.SystemTray.notify('財務報告爬蟲',f'爬取完成！\n已匯出未存在的股號至\n{filename}')
         else:
             logging.info('無缺漏股號。')
+
+        if(len(self.cant_reach)):
+            self.cant_reach = list(filter(None,self.cant_reach))
+            dict = {'代號': self.cant_reach}
+            df = DataFrame(dict)
+            filename = f'.\{dt_string} -財務報告- {self.Year} 年第 {self.Season} 季中爬取失敗之股號.csv'
+            df.to_csv(filename, index=False)
+            print(f'已匯出未存在的股號至{filename}')
+            sg.SystemTray.notify('財務報告爬蟲',f'爬取完成！\n已匯出爬取失敗的股號至\n{filename}')
+        else:
+            logging.info('無爬取失敗股號。')
 
     def spider_closed(self, spider):  # 爬蟲關閉時的動作
         self.output_EmptyList_csv()
@@ -242,5 +256,8 @@ class StockSpider(scrapy.Spider):
             tables2_ItemsName = ['B1', 'B2', 'B3', 'B4']
             self.get_From_Table(items, response, tables1_ID, tables1_ItemsName,True)
             self.get_From_Table(items, response, tables2_ID, tables2_ItemsName,False)
-            yield(items)
+            if(not co_name==None):
+                yield(items)
+            else:
+                self.cant_reach.append(company_Id)
         self.print_info()
