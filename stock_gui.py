@@ -1236,13 +1236,13 @@ def set_Setting_Window():  # 主視窗 -> 設定
                   size=(80, 1), k='mDBUrI')],
         [sg.Text('MongoDB 資料庫 － 選擇要存取的資料庫')],
         [sg.Combo(DB_LIST, default_value=(conf['MongoDB']['DBNAME']), size=(
-            30, 1), k='mDBName', readonly=True, enable_events=True)],
+            30, 1), k='mDBName', readonly=True, enable_events=True,disabled=(not DB_READY))],
         [sg.Text('MongoDB 資料集 － 選擇上述資料庫中要存取的資料集')],
         [sg.Combo(CODATA_LIST, default_value=(conf['MongoDB']['CDATANAME']), size=(
-            30, 1), k='mCDName', readonly=True)],
+            30, 1), k='mCDName', readonly=True,disabled=(not DB_READY))],
         [sg.Text('介面主題'),sg.Combo(theme_list,default_value=sg.theme(),size=(20,1),readonly=True,k='mTheme',enable_events=True)],
         [sg.Button('保存'), sg.Button('取消'), sg.Button('重置')],
-        [sg.Button('開啟設定目錄'), sg.Button('管理資料庫與資料集')]
+        [sg.Button('開啟設定目錄'), sg.Button('管理資料庫與資料集',disabled=(not DB_READY))]
     ]
 
     return sg.Window("程式設定", setting_Layout, margins=(10, 5), finalize=True, modal=True, disable_close=True, disable_minimize=True, no_titlebar=True)
