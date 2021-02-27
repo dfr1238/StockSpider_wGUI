@@ -752,7 +752,7 @@ class MongoDB_Load():
                 pass
 
             if(ForumlaType== '公式三'):
-                self.calc_ans_row_color=[]
+                #self.calc_ans_row_color=[]
                 return_FType=True
                 B2=calc_VarData.iloc[0]["B2"]
                 LastYear_B2=calc_VarData.iloc[0]["去年同期B2"]
@@ -761,6 +761,8 @@ class MongoDB_Load():
                 if(LastYear_B2 == 0.00 or r_EPS == 0.00):
                     continue
                 ans_block=round((((B2-LastYear_B2)/LastYear_B2)*100.00-Price/r_EPS),2)
+                if(LastYear_B2<0):
+                    self.calc_ans_row_color.append(coid)
                 pass
             if(ForumlaType == '公式四'):
                 self.calc_ans_row_color=[]
