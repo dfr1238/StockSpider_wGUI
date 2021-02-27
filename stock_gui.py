@@ -6,6 +6,7 @@ from datetime import datetime
 from math import ceil as math_ceil
 
 import pathlib
+from PySimpleGUI.PySimpleGUI import Combo
 
 import numpy as np
 
@@ -17,13 +18,14 @@ from pandas import read_csv as pd_read_csv
 
 from StockScrapyProject.StockScrapyProject.run_scraper import Scraper
 
-sg.theme('DarkAmber')  # 設定顏色主題
+theme_list = sg.theme_list()
 sg.set_options(auto_size_buttons=True)
 
 print('！！！此為運行時的控制台，關閉將會立刻關閉程式！！！')
 
 formula_Info = ('A1=現金及約當現金\nA2=透過損益按公允價值衡量之金融資產－流動\nA3=透過其他綜合損益按公允價值衡量之金融資產－流動\nA4=按攤銷後成本衡量之金融資產－流動\nA5=避險之金融資產－流動\nA6=非流動負債合計\nA7=普通股股本\nB1=營業收入合計\nB2=營業利益（損失）\nB3=營業外收入及支出合計\nB4=稀釋每股盈餘合計(EPS)\nPrice=收盤價')
 
+theme =''
 # 全域變數
 this_Year = datetime.today().year  # 獲取今年年份
 this_month = datetime.today().month  # 獲取這個月份
@@ -314,7 +316,10 @@ def reset_setting():  # 重置設定
         os.makedirs(profile_PATH)
     if(not conf.has_section('MongoDB')):
         conf.add_section('MongoDB')
+    if(not conf.has_section('System')):
+        conf.add_section('System')
     conf.set('MongoDB', 'MONGO_URI', str(default_MDUrl))
+    conf.set('System','Theme',str(theme_list[0]))
     conf.write(open(cfgpath, 'w'))
     conf.read(cfgpath, encoding='utf-8')
     sg.popup('已建立設定檔。')
@@ -337,6 +342,10 @@ def check_setting():  # 檢查設定
         sg.SystemTray.notify(
             '系統', '已檢查到設定檔。', display_duration_in_ms=250, fade_in_duration=.2)
         conf.read(cfgpath, encoding='utf-8')
+
+        if(conf.has_option('System', 'Theme')):
+            theme = sg.theme(conf.get('System','Theme'))
+
         if(not conf.has_option('MongoDB', 'mongo_uri') or not conf.has_option('MongoDB', 'dbname') or not conf.has_option('MongoDB', 'cdataname')):
             winsound.MessageBeep(winsound.MB_ICONHAND)
             sg.popup_error('系統', '資料庫相關設置遺失！重置設定檔中...')
@@ -1014,6 +1023,7 @@ class MongoDB_Load():
         self.clean_Data()
         self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","SYear":"年份","SDate":"收盤日","CO_SHORT_NAME":"公司縮寫","Price":"收盤價","SUB_DATA_TYPE":"隸屬交易所"})
         #print(self.tableDF)
+        self.tableDF=self.tableDF.dropna()
         self.StockPriceDF=self.tableDF
         print(self.StockPriceDF)
         return True
@@ -1037,6 +1047,7 @@ class MongoDB_Load():
         self.tableType = '財務報告'
         self.clean_Data() #清空列表
         self.tableDF=self.tableDF.rename(columns={"CO_ID":"股號","SYear":"年份","SSeason":"季度","CO_FULL_NAME":"公司全名"})
+        self.tableDF=self.tableDF.dropna()
         print(self.tableDF)
         self.StockDataDF=self.tableDF
         return True
@@ -1227,6 +1238,7 @@ def set_Setting_Window():  # 主視窗 -> 設定
         [sg.Text('MongoDB 資料集 － 選擇上述資料庫中要存取的資料集')],
         [sg.Combo(CODATA_LIST, default_value=(conf['MongoDB']['CDATANAME']), size=(
             30, 1), k='mCDName', readonly=True)],
+        [sg.Text('介面主題'),sg.Combo(theme_list,default_value=sg.theme(),size=(20,1),readonly=True,k='mTheme',enable_events=True)],
         [sg.Button('保存'), sg.Button('取消'), sg.Button('重置')],
         [sg.Button('開啟設定目錄'), sg.Button('管理資料庫與資料集')]
     ]
@@ -1350,6 +1362,7 @@ while True:  # 監控視窗回傳
     if window == setting_Window:  # 主視窗 -> 設定視窗之互動
         window.bring_to_front()
         if event in (sg.WIN_CLOSED, '取消'):
+            sg.theme(conf.get('System','Theme'))
             window.close()
             setting_Window = None
 
@@ -1389,11 +1402,16 @@ while True:  # 監控視窗回傳
                 value=mDBName_value, values=DB_LIST)
             setting_Window.enable()
             setting_Window.make_modal()
+        if event == "mTheme":
+            theme = sg.theme(str(values['mTheme']))
+            setting_Window.close()
+            setting_Window=set_Setting_Window()
         if event == "保存":
             print("Save"+str(values['mDBUrI']),
                   str(values['mDBName']), str(values['mCDName']))
             conf.set('MongoDB', 'DBNAME', str(values['mDBName']))
             conf.set('MongoDB', 'cdataname', str(values['mCDName']))
+            conf.set('System','Theme',str(values['mTheme']))
             check_Mongo()
             if(DB_READY):
                 conf.set('MongoDB', 'MONGO_URI', str(values['mDBUrI']))
@@ -1404,6 +1422,8 @@ while True:  # 監控視窗回傳
                     conf.get('MongoDB', 'DBNAME')), str(conf.get('MongoDB', 'cdataname')))
                 window.close()
                 setting_Window = None
+                main_Window.close()
+                main_Window=set_Main_Window()
             else:
                 setting_Window.make_modal()
 
