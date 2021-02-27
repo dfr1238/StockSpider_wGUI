@@ -74,8 +74,6 @@ class StockSpider(scrapy.Spider):
             self.ready_crawl = 1
             self.start_urls.append(
                 f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={CO_ID}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=C')  # 帶入網址序列
-            self.start_urls.append(
-                f'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID={CO_ID}&SYEAR={self.Year}&SSEASON={self.Season}&REPORT_ID=A')  # 帶入網址序列
         else:
             logging.error('請輸入正確的四位數純數字股號')
             pass
@@ -108,7 +106,7 @@ class StockSpider(scrapy.Spider):
     def spider_closed(self, spider):  # 爬蟲關閉時的動作
         self.output_EmptyList_csv()
         winsound.PlaySound("SystemQuestion",winsound.SND_ALIAS)
-        sg.popup(self.info)
+        sg.popup(f'已完成 {self.Year} - 第 {self.Season} 季度\n{self.info}')
 
     def __init__(self, Year='', Season='', CSV='', Mode='', CO_ID='', **kwargs):  # 初始化動作
         dispatcher.connect(self.spider_closed,
@@ -179,14 +177,26 @@ class StockSpider(scrapy.Spider):
                             data3[1] = data3[1].replace(',', '')
                             items[tables_ItemsName[tableID]] = -(float(data3[1]))
                             continue
+                    elif(len(data4)):
+                        data4[0] = data4[0].replace(',', '')
+                        if(self.is_Number(data4[0])):
+                            items[tables_ItemsName[tableID]] = float(data4[0])
+                            continue
+                        else:
+                            data4[1] = data4[1].replace(',', '')
+                            items[tables_ItemsName[tableID]] = -(float(data4[1]))
+                            continue
                     else:
                         items[tables_ItemsName[tableID]] = float(0.0)
                 else:
                     tables2_ID_Type2 = ['41000', '61000', '59000', '985000']
+                    tables2_ID_Type3 = ['41000', '61000', '59000', '9750']
                     data = datas.xpath(
                     f"//td[text() = '{tables_ID[tableID]}']/following-sibling::td[2]//text()").getall() #td[2]使用代號，td[1]使用名稱定位
                     data2 = datas.xpath(
                     f"//td[text() = '{tables2_ID_Type2[tableID]}']/following-sibling::td[2]//text()").getall() #td[2]使用代號，td[1]使用名稱定位
+                    data3 = datas.xpath(
+                    f"//td[text() = '{tables2_ID_Type3[tableID]}']/following-sibling::td[2]//text()").getall() #td[2]使用代號，td[1]使用名稱定位
                     if(len(data)):
                         data[0] = data[0].replace(',', '')
                         if(self.is_Number(data[0])):
@@ -205,6 +215,16 @@ class StockSpider(scrapy.Spider):
                             data2[1] = data2[1].replace(',', '')
                             items[tables_ItemsName[tableID]] = -(float(data2[1]))
                             continue
+                    elif(len(data3)):
+                        data3[0] = data3[0].replace(',', '')
+                        if(self.is_Number(data3[0])):
+                            items[tables_ItemsName[tableID]] = float(data3[0])
+                            continue
+                        else:
+                            data3[1] = data3[1].replace(',', '')
+                            items[tables_ItemsName[tableID]] = -(float(data3[1]))
+                            continue
+                    
                     else:
                         items[tables_ItemsName[tableID]] = float(0.0)
 
@@ -256,8 +276,9 @@ class StockSpider(scrapy.Spider):
             tables2_ItemsName = ['B1', 'B2', 'B3', 'B4']
             self.get_From_Table(items, response, tables1_ID, tables1_ItemsName,True)
             self.get_From_Table(items, response, tables2_ID, tables2_ItemsName,False)
-            if(not co_name==None):
+            if(co_name!=None):
                 yield(items)
             else:
                 self.cant_reach.append(company_Id)
+                return
         self.print_info()
