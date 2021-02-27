@@ -148,7 +148,7 @@ def connect_Mongo(isInit, isCreateNewDB, isCreateCODATA, isNeedSelect):
         except configparser.NoOptionError:
             MongoDB_CODATA = ''
 
-        sg.popup_no_buttons('連接到 MonogoDB 中，請稍後...', non_blocking=True, grab_anywhere=False,
+        sg.popup_no_buttons('連接到 MongoDB 中，請稍後...', non_blocking=True, grab_anywhere=False,
                             no_titlebar=True, auto_close=True, auto_close_duration=1)
         DB_LIST = DBClient.list_database_names()
         DB_LIST.remove('local')
@@ -251,7 +251,7 @@ def connect_Mongo(isInit, isCreateNewDB, isCreateCODATA, isNeedSelect):
                 conf.set('MongoDB', 'CDATANAME', str(MongoDB_CODATA))
                 conf.write(open(cfgpath, 'w'))
                 sg.SystemTray.notify(
-                    'MonogoDB 已預備完成！', f'資料庫: {MongoDBName} \n資料集: {MongoDB_CODATA}\n功能初始化完成', display_duration_in_ms=300, fade_in_duration=.2)
+                    'MongoDB 已預備完成！', f'資料庫: {MongoDBName} \n資料集: {MongoDB_CODATA}\n功能初始化完成', display_duration_in_ms=300, fade_in_duration=.2)
             else:
                 if(isInit or CreateCODATA):
                     if(not CreateCODATA and not isInit):
@@ -308,8 +308,8 @@ def connect_Mongo(isInit, isCreateNewDB, isCreateCODATA, isNeedSelect):
         conf.set('MongoDB', 'DBNAME', '')
         conf.set('MongoDB', 'CDATANAME', '')
         conf.write(open(cfgpath, 'w'))
-        sg.popup_ok('MongoDB 連接失敗，請確定是否有安裝 MonogoDB\n或者 MongoDB 服務是否有運行中！',
-                    title='MonogoDB', no_titlebar=True)
+        sg.popup_ok('MongoDB 連接失敗，請確定是否有安裝 MongoDB\n或者 MongoDB 服務是否有運行中！',
+                    title='MongoDB', no_titlebar=True)
         return None
 
 
@@ -1146,8 +1146,8 @@ def set_local_CSV_Import_usercsvfile_mode():  # 匯入外部股號表 -> 匯入�
 def set_AutoMode_Window():  # 多筆模式 -> 自動爬取來源
     autoMode_Layout = [
         [sg.Text('選擇股號來源')],
-        [sg.Radio('從本機股號表讀入', group_id='AM_LoadMode', key='_loadFromLocal', default=True), sg.Radio(
-            '從CSV檔匯入', group_id='AM_LoadMode', key='_loadFromCSV')],
+        [sg.Radio('從本機股號表讀入', group_id='AM_LoadMode', key='_loadFromLocal', default=(len(user_Coid_CSV_List)!=0),disabled=(len(user_Coid_CSV_List)==0)), sg.Radio(
+            '從CSV檔匯入', group_id='AM_LoadMode', key='_loadFromCSV',default=(len(user_Coid_CSV_List)==0))],
         [sg.Button('確定'), sg.Button('取消')],
         [sg.Text('本機股報表位於：\n'+csvpath)]
     ]
@@ -1190,8 +1190,8 @@ def set_Main_Window():  # 主視窗
         [sg.Button('存取資料庫', disabled=(not DB_READY),tooltip='存取資料庫內已有的資料：財務報告、股價資料，可以按順序排列後匯出報表檔。'),
          sg.Button('連接資料庫', visible=(not DB_READY),tooltip='資料庫屬於離線狀態，點擊即可重新嘗試連線。')],
         [sg.Text('[網路爬蟲]')],
-        [sg.Button('開始爬取財務報告', disabled=((not DB_READY) or len(user_Coid_CSV_List)==0),tooltip='到 TWSE 爬取一系列或單筆股號的財務報告')],
-        [sg.Button('開始爬取股價資料', disabled=((not DB_READY) or len(user_Coid_CSV_List)==0),tooltip='到 TWSE與 TPEX 爬取一系列的收盤價資訊。')],
+        [sg.Button('開始爬取財務報告', disabled=((not DB_READY)),tooltip='到 TWSE 爬取一系列或單筆股號的財務報告')],
+        [sg.Button('開始爬取股價資料', disabled=((not DB_READY)),tooltip='到 TWSE與 TPEX 爬取一系列的收盤價資訊。')],
         [sg.Text('[運行計算式]')],
         [sg.Combo(['公式一', '公式二', '公式三', '公式四', '公式五', '公式六'],
                   default_value='公式一', k='Combo_Formula', size=(8, 1), readonly=True, enable_events=True),
@@ -1320,7 +1320,7 @@ while True:  # 監控視窗回傳
                 MDB_Load = MongoDB_Load()
                 scrapyer.change_Project_Setting(str(conf.get('MongoDB', 'MONGO_URI')), str(
                     conf.get('MongoDB', 'DBNAME')), str(conf.get('MongoDB', 'cdataname')))
-            main_Window = None
+            main_Window.close()
             main_Window = set_Main_Window()
 
         if event == "計算":
@@ -1475,6 +1475,7 @@ while True:  # 監控視窗回傳
                     call_Price_Spider(False, custom_Price_Spider_CSVPATH)
                 else:
                     window.close()
+                    main_Window.normal()
                     Spider_Stock_Price_Window = None
 
     if window == aM_Window:  # 主視窗 -> 財務批次爬蟲 -> 選擇來源
@@ -1498,6 +1499,7 @@ while True:  # 監控視窗回傳
                         True, False, custom_Stock_Spider_CSVPATH, '')
                 else:
                     window.close()
+                    main_Window.normal()
                     aM_Window = None
 
     if window == csv_Row_Add_Window:  # 編輯本機股號表 -> 新增單筆資料
