@@ -952,7 +952,11 @@ class MongoDB_Load():
             self.db_Data_Newest_Season = self.StockDataDF.loc[self.StockDataDF["年份"]==self.db_Data_Newest_Year,"季度"].max()
             print(f'年份：{self.db_Data_Newest_Year} 季度：{self.db_Data_Newest_Season}')
             if(self.get_calc_Formula_var(coid_list)):
-                coid_list=self.calcDataDF["股號"].drop_duplicates().tolist()
+                try:
+                    coid_list=self.calcDataDF["股號"].drop_duplicates().tolist()
+                except KeyError:
+                    sg.popup_error('載入股價資料時發生錯誤，請確定是否抓取了今日股價資料！')
+                    return False
                 if(self.calc_Forumla(coid_list,FormulaType)):
                     print('True')
                     self.calcAnsDF.sort_values(by='答案',ascending=True)
