@@ -853,23 +853,24 @@ class MongoDB_Load():
             last_year_B2=getStockData_LastYear.iloc[0]["B2"]
             last_year_B4=0.0
             B4=0.0
-            if(start_season!=4):
+            if(start_season!=4): #非第四季取前年與今年B4
                 B4=getStockData_StartTime.iloc[0]["B4"]
                 last_year_B4=getStockData_LastYear.iloc[0]["B4"]
-            else:
+                print(f'今年季度B4：{B4} 去年為{last_year_B4}')
+            else: #第四季
                 temp_S1_S3_SUM=0.0
                 B4=getStockData_StartTime.iloc[0]["B4"]
                 last_year_B4=getStockData_LastYear.iloc[0]["B4"]
-                #print('年',run_year,'季度',run_season)
+                print('年',run_year,'季度',run_season)
                 for season in range(3,0,-1): #今年
                     temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year)) & (self.StockDataDF["季度"] == str(season))]
                     temp_StockData = temp_StockData.reset_index(drop=True)
                     temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
-                #print(temp_S1_S3_SUM)
+                print(temp_S1_S3_SUM)
                 B4-=temp_S1_S3_SUM
                 B4=round(B4,2)
                 temp_S1_S3_SUM=0.0
-                #print('年',run_year,'季度',run_season)
+                print('年',run_year,'季度',run_season)
                 for season in range(3,0,-1): #去年
                     temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(start_year-1)) & (self.StockDataDF["季度"] == str(season))]
                     temp_StockData = temp_StockData.reset_index(drop=True)
@@ -882,47 +883,52 @@ class MongoDB_Load():
                 sg.Print(f'抓不到 {coid} 的收盤價，請確認股價資料的正確性，必要時請更新本機股號表！')
                 Price=0.0
             is_run_season_exist=True
+            temp_S1_S3_SUM=0.0
             while run_year >= end_year: #目前年份
-                temp_S1_S3_SUM=0.0
                 if(count_Season > 4):
-                    #print('Out Year')
+                    print('Out Year')
                     break
                 while run_season >= 1 and count_Season <= 4: #目前季度
-                    #print(f'COID: {coid} RUNY: {run_year} RUNS : {run_season} countS: {count_Season}')
+                    print(f'COID: {coid} RUNY: {run_year} RUNS : {run_season} countS: {count_Season}')
                     getStockData_PerSeason=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(run_year)) & (self.StockDataDF["季度"] == str(run_season))]
                     getStockData_PerSeason = getStockData_PerSeason.reset_index(drop=True)
                     if(run_season!=4):
+                        print(f'該季B4為{getStockData_PerSeason.iloc[0]["B4"]}')
                         recent_EPS+=getStockData_PerSeason.iloc[0]["B4"]
-                        #print('近四季',recent_EPS)
+                        print(f'COID: {coid}正在加總近四季',recent_EPS)
                     else:
-                        #print('年',run_year,'季度',run_season)
+                        print('測到第四季度，年：',run_year,'季度：',run_season)
+                        S4_EPS=getStockData_PerSeason.iloc[0]["B4"]
+                        temp_StockData=''
                         for season in range(3,0,-1):
                             temp_StockData=self.StockDataDF[(self.StockDataDF["股號"]==coid) & (self.StockDataDF["年份"] == str(run_year)) & (self.StockDataDF["季度"] == str(season))]
                             temp_StockData = temp_StockData.reset_index(drop=True)
-                            print(f'年份： {run_year} 季度: {season}')
-                            print(temp_StockData)
+                            #print(temp_StockData)
                             try:
                                 temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
+                                print(f'年份： {run_year} 季度: {season} B4: {temp_StockData.iloc[0]["B4"]}')
                             except IndexError:
                                 sg.Print(f'在讀入 {coid} 股號時之 {run_year} 年的第 {run_season} 季度時發生錯誤\n請確定有抓取該股號當年的第 {season} 季度的財務報告！')
                                 is_run_season_exist=False
                                 break
-                            #print(temp_S1_S3_SUM)
                         if(not(is_run_season_exist)):
                             break
+                        temp_S1_S3_SUM = round(temp_S1_S3_SUM,2)
+                        print(f'{coid}股號， {run_year}年第四季{S4_EPS} 前三季EPS{temp_S1_S3_SUM}')
+                        S4_EPS-=temp_S1_S3_SUM
+                        S4_EPS = round(S4_EPS,2)
+                        print(f'減去前三季之後該年第四季EPS為:{S4_EPS}')
+                        recent_EPS+=S4_EPS
+                        recent_EPS = round(recent_EPS,2)
                     if(not(is_run_season_exist)):
                         break
-                    S4_EPS=round(getStockData_PerSeason.iloc[0]["B4"],2)
-                    #print('第四季EPS',S4_EPS)
-                    #print('前三季總和',temp_S1_S3_SUM)
-                    S4_EPS-=temp_S1_S3_SUM
-                    #print('第四季EPS-前三季EPS',round(S4_EPS,2))
-                    recent_EPS+=round(S4_EPS,2)
-                    recent_EPS=round(recent_EPS,2)
-                    print('近四季',recent_EPS)
-                    run_season-=1
-                    count_Season+=1
+                    else:
+                        print('近四季',recent_EPS)
+                        run_season-=1
+                        count_Season+=1
                     #print(f'{getStockData_PerSeason}')
+                if(not(is_run_season_exist)):
+                    break  
                 run_season=4
                 run_year-=1
                 #print('Out Season')
@@ -933,8 +939,8 @@ class MongoDB_Load():
             cols=['股號','名稱','年份','季度','A1','A2','A3','A4','A5','A6','A7','B1','B2','B3','B4','去年同期B2','去年同期B3','去年同期B4','股價','近四季 EPS']
             self.calcDataDF = self.calcDataDF[cols]
             print(f'當年當季資料：{getStockData_StartTime}\n去年同期資料：{getStockData_LastYear}\n今日股價：{Price}\n近四季EPS：{recent_EPS}')
-        print(self.calcDataDF)
-        print(self.calcDataDF.dtypes)
+        #print(self.calcDataDF)
+        #print(self.calcDataDF.dtypes)
         self.is_calcDataDF_Ready=True
         return True
 
