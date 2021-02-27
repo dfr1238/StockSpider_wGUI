@@ -1,6 +1,7 @@
 import configparser
 import os
 import os.path as path
+from typing import Tuple
 import winsound
 from datetime import datetime
 from math import ceil as math_ceil
@@ -659,6 +660,7 @@ class MongoDB_Load():
     calcAnsDF=DataFrame()
     StockPriceDF=DataFrame([])
     MixDataDF=DataFrame([])
+    calc_ans_row_color=[]
     Date=''
     db=''
     codata=''
@@ -671,16 +673,19 @@ class MongoDB_Load():
             filter_list=list(filter_list)
             print(filter_list)
             displayDB_Window['display_Table'].update(values=filter_list)
+            self.set_row_color()
         else:
             filter_list=[]
             self.update_TableData()
             self.update_TableWithoutColChange()
+            self.set_row_color()
     def export_Table(self):
         filename = sg.popup_get_file('選擇儲存路徑','匯出表格',default_path=f'{self.Date } 之{self.tableType} 匯出',save_as=True,file_types=(("CSV 檔","*.csv"),("Excel 檔","*.xlsx")),no_window=True)
         if(pathlib.Path(filename).suffix==".csv"):
             self.tableDF.to_csv(filename,encoding='utf-8', index=False)
         if(pathlib.Path(filename).suffix==".xlsx"):
             self.tableDF.to_excel(filename,encoding='utf-8', index=False)
+
     def clean_Data(self):
         self.table_List.clear()
         self.table_Heading.clear()
@@ -694,6 +699,7 @@ class MongoDB_Load():
         pass
     
     def calc_Forumla(self,coid_list,ForumlaType):
+        self.calc_ans_row_color=[]
         self.calcAnsDF=DataFrame()
         start_year=int(self.db_Data_Newest_Year)
         start_season=int(self.db_Data_Newest_Season)
@@ -715,6 +721,7 @@ class MongoDB_Load():
             name=calc_VarData.iloc[0]["名稱"]
             recent_EPS=calc_VarData.iloc[0]["近四季 EPS"]
             if(ForumlaType=='公式一'):
+                self.calc_ans_row_color=[]
                 return_FType=True
                 A1=calc_VarData.iloc[0]["A1"]
                 A2=calc_VarData.iloc[0]["A2"]
@@ -740,9 +747,12 @@ class MongoDB_Load():
                     continue
 
                 ans_block=round((((B4-LastYear_B4)/LastYear_B4)*100.0-Price/r_EPS),2)
+                if(LastYear_B4<0):
+                    self.calc_ans_row_color.append(coid)
                 pass
 
             if(ForumlaType== '公式三'):
+                self.calc_ans_row_color=[]
                 return_FType=True
                 B2=calc_VarData.iloc[0]["B2"]
                 LastYear_B2=calc_VarData.iloc[0]["去年同期B2"]
@@ -753,6 +763,7 @@ class MongoDB_Load():
                 ans_block=round((((B2-LastYear_B2)/LastYear_B2)*100.00-Price/r_EPS),2)
                 pass
             if(ForumlaType == '公式四'):
+                self.calc_ans_row_color=[]
                 return_FType=True
                 calc_block_1=0.00
                 calc_block_1=calc_VarData.iloc[0]["B2"]
@@ -767,6 +778,7 @@ class MongoDB_Load():
                 else:
                     continue
             if(ForumlaType == '公式五'):
+                self.calc_ans_row_color=[]
                 calc_block_1=0.00
                 calc_block_1=calc_VarData.iloc[0]["B2"]
                 calc_block_1-=calc_VarData.iloc[0]["去年同期B2"]
@@ -777,6 +789,7 @@ class MongoDB_Load():
                     continue
                 pass
             if(ForumlaType == '公式六'):
+                self.calc_ans_row_color=[]
                 calc_block_1=0.00
                 calc_block_1=calc_VarData.iloc[0]["B3"]
                 calc_block_1-=calc_VarData.iloc[0]["去年同期B3"]
@@ -796,7 +809,19 @@ class MongoDB_Load():
                 #print(self.calcAnsDF.dtypes)
             #print(self.calcAnsDF)
         return True
-
+    def set_row_color(self):
+        color_list=[]
+        color_list.clear()
+        global displayDB_Window
+        for j in self.table_List:
+            if(j[0] in self.calc_ans_row_color):
+                color_list.append((self.table_List.index(j),'Red'))
+            else:
+                color_list.append((self.table_List.index(j),''))
+        #print(self.table_List)
+        print(color_list)
+        displayDB_Window['display_Table'].update(row_colors=tuple(color_list))
+        pass
     def get_calc_Formula_var(self,coid_list):
         if(self.is_calcDataDF_Ready):
             return True
@@ -856,9 +881,11 @@ class MongoDB_Load():
             last_year_B4=0.0
             B4=0.0
             if(start_season!=4): #非第四季取前年與今年B4
+                #print('A',getStockData_StartTime)
+                #print('B',getStockData_LastYear)
                 B4=getStockData_StartTime.iloc[0]["B4"]
                 last_year_B4=getStockData_LastYear.iloc[0]["B4"]
-                print(f'今年季度B4：{B4} 去年為{last_year_B4}')
+                #print(f'{coid} - 今年季度B4：{B4} 去年為 {last_year_B4}')
             else: #第四季
                 temp_S1_S3_SUM=0.0
                 B4=getStockData_StartTime.iloc[0]["B4"]
@@ -940,8 +967,8 @@ class MongoDB_Load():
             self.calcDataDF = self.calcDataDF.append(dict, ignore_index=True,sort=False)
             cols=['股號','名稱','年份','季度','A1','A2','A3','A4','A5','A5_5','A6','A7','B1','B2','B3','B4','去年同期B2','去年同期B3','去年同期B4','股價','近四季 EPS']
             self.calcDataDF = self.calcDataDF[cols]
-            print(f'當年當季資料：{getStockData_StartTime}\n去年同期資料：{getStockData_LastYear}\n今日股價：{Price}\n近四季EPS：{recent_EPS}')
-        #print(self.calcDataDF)
+            #print(f'當年當季資料：{getStockData_StartTime}\n去年同期資料：{getStockData_LastYear}\n今日股價：{Price}\n近四季EPS：{recent_EPS}')
+        print(self.calcDataDF)
         #print(self.calcDataDF.dtypes)
         self.is_calcDataDF_Ready=True
         return True
@@ -996,12 +1023,14 @@ class MongoDB_Load():
         self.table_Heading=list(self.tableDF.head())
 
     def load_StockPriceTable(self):
+        self.calc_ans_row_color=[]
         is_Exist=True
         is_Exist=self.load_StockPriceData()
         self.update_TableData()
         return is_Exist
 
     def load_StockDataTable(self):
+        self.calc_ans_row_color=[]
         is_Exist=True
         is_Exist=self.load_StockData()
         self.update_TableData()
@@ -1089,13 +1118,14 @@ class MongoDB_Load():
         self.tableDF=self.tableDF.sort_values(by=key,ascending=[order_com1,order_com2],axis=0)
         self.update_TableData()
         self.update_TableWithoutColChange()
+        self.set_row_color()
         pass
     def set_display_DB_Data(self):
         displayDB_Layout = [
             [sg.Text('目前顯示'), sg.Text(self.tableType, k='display_Type')],
             [sg.Table(values=self.table_List, auto_size_columns=False, def_col_width=10,justification="left",
                       headings=self.table_Heading, num_rows=min(30,len(self.table_List)), select_mode="extended",
-                      enable_events=True, key='display_Table', bind_return_key=True, vertical_scroll_only=False)],
+                      enable_events=True, key='display_Table', bind_return_key=True, vertical_scroll_only=False,row_colors=None)],
             [sg.Text('過濾條件\t'), sg.Text('過濾數值'), sg.Input(k='Input_Filter', size=(35, 1),enable_events=True)],
             [sg.Text('排序資料'), sg.Combo(self.table_Heading, default_value=self.table_Heading[0], k='Order_Data_1', size=(10, 1),readonly=True,enable_events=True),sg.Combo(self.table_Heading, default_value=self.table_Heading[1], k='Order_Data_2', size=(10, 1),readonly=True,enable_events=True)],
             [sg.Text('順序類型'), sg.Combo(['由大到小', '由小到大'], default_value='由大到小', k='Order_Type_1', size=(
@@ -1339,6 +1369,7 @@ while True:  # 監控視窗回傳
             main_Window.minimize()
             if(MDB_Load.init_calc(str(values['Combo_Formula']))):
                 displayDB_Window = MDB_Load.set_display_DB_Data()
+                MDB_Load.set_row_color()
             else:
                 main_Window.normal()
 
