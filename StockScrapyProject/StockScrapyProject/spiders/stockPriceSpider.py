@@ -173,7 +173,7 @@ class stockPriceSpider(scrapy.Spider):
 
             for co_id in local_Co_ids:
                 self.not_manual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.isExist,'Stock','運行時請勿點擊視窗，顯示沒有回應請勿關閉，為正常現象。\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
-                if(not self.not_manual_cancel and self.current < self.exist-1):
+                if(not self.not_manual_cancel and self.current < self.isExist-1):
                     Button = sg.popup_yes_no('是否取消？','取消爬取')
                     if(Button=='Yes'):
                         sg.popup('已手動取消！')
@@ -234,7 +234,7 @@ class stockPriceSpider(scrapy.Spider):
 
                 for co_id in local_Co_ids:
                     self.not_manual_cancel = sg.one_line_progress_meter('目前爬取進度',self.current,self.isExist-1,'Stock','運行時請勿點擊視窗，顯示沒有回應請勿關閉，為正常現象。\nElapsed Time 為已運行時間\nTime Remaining 為剩餘時間\nEstimated Total Time 為估計完成時間',no_titlebar=False,orientation='h')
-                    if(not self.not_manual_cancel and self.current < self.exist-1):
+                    if(not self.not_manual_cancel and self.current < self.isExist-1):
                         Button = sg.popup_yes_no('是否取消？','取消爬取')
                         if(Button=='Yes'):
                             sg.popup('已手動取消！')
