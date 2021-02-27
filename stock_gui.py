@@ -6,7 +6,6 @@ from datetime import datetime
 from math import ceil as math_ceil
 
 import pathlib
-from PySimpleGUI.PySimpleGUI import Combo
 
 import numpy as np
 
@@ -24,6 +23,9 @@ sg.set_options(auto_size_buttons=True)
 print('！！！此為運行時的控制台，關閉將會立刻關閉程式！！！')
 
 formula_Info = ('A1=現金及約當現金\nA2=透過損益按公允價值衡量之金融資產－流動\nA3=透過其他綜合損益按公允價值衡量之金融資產－流動\nA4=按攤銷後成本衡量之金融資產－流動\nA5=避險之金融資產－流動\nA6=非流動負債合計\nA7=普通股股本\nB1=營業收入合計\nB2=營業利益（損失）\nB3=營業外收入及支出合計\nB4=稀釋每股盈餘合計(EPS)\nPrice=收盤價')
+
+main_Window_Help='歡迎使用股票資訊與計算程式，如果你是第一次使用的話，請先到「編輯本機股號表」裡面匯入你的股號表（格式為CSV），之後即可開始使用其他功能\n如果有要做計算功能，請先用網路爬蟲功能抓取必要的財務報告與股價！且注意需要的抓取數目！\n財務報告：如果目前屬於第四季，那麼你只要抓取該年的1-4季的資料即可，但若不是的話得額外抓取去年的1-4季資料才行！\n股價資料：收盤之後啟動爬蟲抓取，將會幫你抓取今日的收盤價資訊。\n「編輯本機股號表」內可以匯入你已有的一系列股號的CSV檔，請記得匯入時請包含代號與名稱欄位\n你可以在「設定」中存取或刪除指定的資料庫，或者更改配色主題'
+
 
 theme =''
 # 全域變數
@@ -70,15 +72,15 @@ default_MDUrl = 'mongodb://localhost:27017/?readPreference=primary&appname=Stock
 # setting.ini相關設定
 curpath = os.path.dirname(os.path.realpath(__file__))  # 目前路徑
 cfgpath = os.path.join(profile_PATH, _file_name_setting_ini)  # 設定檔路徑
-csvpath = os.path.join(profile_PATH+_file_name_local_csv)  # 本地股號表路徑
+csvpath = os.path.join(profile_PATH+_file_name_local_csv)  # 本機股號表路徑
 conf = configparser.ConfigParser()  # 創建設定檔對象
 
 
 # PD.DF設置
-coid_dict = {"代號": [], "名稱": []}  # 建立空的本地股號列表
+coid_dict = {"代號": [], "名稱": []}  # 建立空的本機股號列表
 coid_dict_type = {'代號': 'string', '名稱': 'string'}  # 建立股號列表檔案類型
-local_csvdf = DataFrame(coid_dict)  # 導入本地股號表pd使用
-user_df = DataFrame(coid_dict)  # 建立暫存本地股號表pd使用
+local_csvdf = DataFrame(coid_dict)  # 導入本機股號表pd使用
+user_df = DataFrame(coid_dict)  # 建立暫存本機股號表pd使用
 import_csv_df = DataFrame(coid_dict)  # 導入pd使用
 import_csv_df.astype("string")  # 設定資料類型為字串
 user_df.astype("string")  # 設定資料類型為字串
@@ -319,7 +321,7 @@ def reset_setting():  # 重置設定
     if(not conf.has_section('System')):
         conf.add_section('System')
     conf.set('MongoDB', 'MONGO_URI', str(default_MDUrl))
-    conf.set('System','Theme',str(theme_list[0]))
+    conf.set('System','Theme',str('DarkBlack1'))
     conf.write(open(cfgpath, 'w'))
     conf.read(cfgpath, encoding='utf-8')
     sg.popup('已建立設定檔。')
@@ -328,13 +330,13 @@ def reset_setting():  # 重置設定
 
 def reset_csv():  # 重建csv檔
     global user_Coid_CSV_List, local_csvdf, user_df
-    local_csvdf = DataFrame(coid_dict)  # 導入本地股號表pd使用
+    local_csvdf = DataFrame(coid_dict)  # 導入本機股號表pd使用
     local_csvdf.to_csv(csvpath, index=False, sep=',')
     user_df = local_csvdf
     user_Coid_CSV_List = user_df.values.tolist()
     sg.SystemTray.notify(
-        '系統', '已建立本地股號表。', display_duration_in_ms=250, fade_in_duration=.2)
-    # sg.Print('重建本地股號表')
+        '系統', '已建立本機股號表。', display_duration_in_ms=250, fade_in_duration=.2)
+    # sg.Print('重建本機股號表')
 
 
 def check_setting():  # 檢查設定
@@ -356,10 +358,10 @@ def check_setting():  # 檢查設定
         reset_setting()
 
 
-def check_local_csv():  # 檢查本地CSV
+def check_local_csv():  # 檢查本機CSV
     if(path.exists(profile_PATH+_file_name_local_csv)):
         global local_csvdf, user_Coid_CSV_List, user_df
-        sg.SystemTray.notify('系統', '已檢查到本地股號表。',
+        sg.SystemTray.notify('系統', '已檢查到本機股號表。',
                              display_duration_in_ms=250, fade_in_duration=.2)
         try:
             local_csvdf = pd_read_csv(
@@ -369,11 +371,11 @@ def check_local_csv():  # 檢查本地CSV
             user_df = local_csvdf
         except pd_errors.EmptyDataError:
             winsound.MessageBeep(winsound.MB_ICONHAND)
-            sg.popup_error('讀取本地股號表時發生錯誤！重建本地股號表...')
+            sg.popup_error('讀取本機股號表時發生錯誤！重建本機股號表...')
             reset_csv()
             check_local_csv()
     else:
-        sg.popup('未建立本地股號表，創建中...', title='系統')
+        sg.popup('未建立本機股號表，創建中...', title='系統')
         reset_csv()
 
 # 初始化函數
@@ -441,7 +443,7 @@ def call_Stock_Spider(isAutoMode, isLocal, LOAD_CSVPATH, M_CO_ID):
 
 # 普通應用方法
 
-def local_CSV_Restore_USER_DF():  # 還原本地股號表資料狀態
+def local_CSV_Restore_USER_DF():  # 還原本機股號表資料狀態
     global user_df, local_Coid_CSV_is_changed, backup_Coid_pd_df, local_Csv_Window
     user_df = backup_Coid_pd_df.pop(-1)
     step = len(backup_Coid_pd_df)
@@ -452,7 +454,7 @@ def local_CSV_Restore_USER_DF():  # 還原本地股號表資料狀態
             disabled=not(local_Coid_CSV_is_changed))
 
 
-def local_CSV_Backup_USER_DF():  # 備份本地股號表資料狀態
+def local_CSV_Backup_USER_DF():  # 備份本機股號表資料狀態
     global user_df, local_Coid_CSV_is_changed, backup_Coid_pd_df, local_Csv_Window
     backup_Coid_pd_df.append(user_df)
     step = len(backup_Coid_pd_df)
@@ -486,7 +488,7 @@ def filter_Local_CSV_Table(filter_String):  # 資料過濾
         values=filter_Coid_CSV_List)
 
 
-def save_Local_CSV():  # 保存至本地股號表
+def save_Local_CSV():  # 保存至本機股號表
     global local_Coid_CSV_is_changed, user_df
     user_df.to_csv(csvpath, index=False, sep=',',
                    header=coid_dict, encoding='utf-8')
@@ -504,7 +506,7 @@ def load_Local_CSV_Table_USERVDF():  # 從暫存PD.DF中讀入至表單中
             values=user_Coid_CSV_List)
 
 
-def load_Local_CSV_Table_CSVDF():  # 從本地股號表PD.DF中讀入至表單中
+def load_Local_CSV_Table_CSVDF():  # 從本機股號表PD.DF中讀入至表單中
     global local_csvdf, local_Coid_CSV_is_changed, user_Coid_CSV_List
     user_Coid_CSV_List = local_csvdf.values.tolist()
     local_Csv_Window['_local_Coid_CSV_Table'].update(values=user_Coid_CSV_List)
@@ -516,20 +518,20 @@ def refresh_Local_CSV_Table():  # 重新整理股號表
         load_Local_CSV_Table_USERVDF()
 
 
-def update_Local_CSV_Table():  # 從本地股表重新載入
+def update_Local_CSV_Table():  # 從本機股表重新載入
     global local_csvdf, local_Coid_CSV_is_changed
     if(local_Csv_Window != None):
         load_Local_CSV_Table_CSVDF()
 
 
-def reset_Local_CSV_Table():  # 重置本地股號表
+def reset_Local_CSV_Table():  # 重置本機股號表
     global local_csvdf, local_Coid_CSV_is_changed
     if(local_Csv_Window != None):
         reset_csv()
         load_Local_CSV_Table_CSVDF()
 
 
-def local_CSV_Row_Edit(isEdit, index):  # 編輯本地股號表 ->編輯單筆資料
+def local_CSV_Row_Edit(isEdit, index):  # 編輯本機股號表 ->編輯單筆資料
     global local_Csv_Window, local_Coid_CSV_is_changed, user_Coid_CSV_List, user_df, filter_Coid_CSV_List
     if(not local_Coid_CSV_is_filter):
         old_Coid = str(user_Coid_CSV_List[index][0])
@@ -877,7 +879,7 @@ class MongoDB_Load():
             try:
                 Price=getStockPriceData.iloc[0]["收盤價"]
             except IndexError:
-                sg.Print(f'抓不到 {coid} 的收盤價，請確認股價資料的正確性，必要時請更新本地股號表！')
+                sg.Print(f'抓不到 {coid} 的收盤價，請確認股價資料的正確性，必要時請更新本機股號表！')
                 Price=0.0
             is_run_season_exist=True
             while run_year >= end_year: #目前年份
@@ -1103,7 +1105,7 @@ def set_Force_Exit():
     return sg.Window("動作中...", Force_Exit_Layout, margins=(20, 10), finalize=True, modal=True, no_titlebar=True)
 
 
-def set_local_CSV_Remove_Row(coid, coname):  # 編輯本地股號表 -> 刪除單筆資料
+def set_local_CSV_Remove_Row(coid, coname):  # 編輯本機股號表 -> 刪除單筆資料
     Remove_Row_Layout = [
         [sg.Text(f'刪除 {coid} {coname} ？')],
         [sg.Button('是'), sg.Button('否')]
@@ -1111,7 +1113,7 @@ def set_local_CSV_Remove_Row(coid, coname):  # 編輯本地股號表 -> 刪除�
     return sg.Window("刪除單筆資料", Remove_Row_Layout, margins=(30, 10), finalize=True, modal=True, no_titlebar=True)
 
 
-def set_local_CSV_Add_Row():  # 編輯本地股號表 -> 新增單筆資料
+def set_local_CSV_Add_Row():  # 編輯本機股號表 -> 新增單筆資料
     add_Row_Layout = [
         [sg.Text('公司股號：'), sg.Input(default_text='', size=(5, 1), k='COID')],
         [sg.Text('公司名稱：'), sg.Input(default_text='', size=(25, 1), k='CONAME')],
@@ -1120,7 +1122,7 @@ def set_local_CSV_Add_Row():  # 編輯本地股號表 -> 新增單筆資料
     return sg.Window("新增單筆資料", add_Row_Layout, margins=(30, 10), finalize=True, modal=True, no_titlebar=True)
 
 
-def set_local_CSV_Edit_Row(coid, coname):  # 編輯本地股號表 -> 編輯單筆資料
+def set_local_CSV_Edit_Row(coid, coname):  # 編輯本機股號表 -> 編輯單筆資料
     edit_Row_Layout = [
         [sg.Text('公司股號：'), sg.Input(default_text=coid, size=(5, 1), k='COID')],
         [sg.Text('公司名稱：'), sg.Input(
@@ -1144,10 +1146,10 @@ def set_local_CSV_Import_usercsvfile_mode():  # 匯入外部股號表 -> 匯入�
 def set_AutoMode_Window():  # 多筆模式 -> 自動爬取來源
     autoMode_Layout = [
         [sg.Text('選擇股號來源')],
-        [sg.Radio('從本地股號表讀入', group_id='AM_LoadMode', key='_loadFromLocal', default=True), sg.Radio(
+        [sg.Radio('從本機股號表讀入', group_id='AM_LoadMode', key='_loadFromLocal', default=True), sg.Radio(
             '從CSV檔匯入', group_id='AM_LoadMode', key='_loadFromCSV')],
         [sg.Button('確定'), sg.Button('取消')],
-        [sg.Text('本地股報表位於：\n'+csvpath)]
+        [sg.Text('本機股報表位於：\n'+csvpath)]
     ]
     return sg.Window("選擇資料來源", autoMode_Layout, margins=(20, 10), finalize=True, modal=True, no_titlebar=True)
 
@@ -1185,25 +1187,25 @@ def set_Spider_Stock_Select_Mode_Window():  # 主視窗 -> 爬取模式
 def set_Main_Window():  # 主視窗
     main_Layout = [
         [sg.Text('[資料庫]')],
-        [sg.Button('存取資料庫', disabled=(not DB_READY)),
-         sg.Button('連接資料庫', visible=(not DB_READY))],
+        [sg.Button('存取資料庫', disabled=(not DB_READY),tooltip='存取資料庫內已有的資料：財務報告、股價資料，可以按順序排列後匯出報表檔。'),
+         sg.Button('連接資料庫', visible=(not DB_READY),tooltip='資料庫屬於離線狀態，點擊即可重新嘗試連線。')],
         [sg.Text('[網路爬蟲]')],
-        [sg.Button('開始爬取財務報告', disabled=(not DB_READY))],
-        [sg.Button('開始爬取股價資料', disabled=(not DB_READY))],
+        [sg.Button('開始爬取財務報告', disabled=((not DB_READY) or len(user_Coid_CSV_List)==0),tooltip='到 TWSE 爬取一系列或單筆股號的財務報告')],
+        [sg.Button('開始爬取股價資料', disabled=((not DB_READY) or len(user_Coid_CSV_List)==0),tooltip='到 TWSE與 TPEX 爬取一系列的收盤價資訊。')],
         [sg.Text('[運行計算式]')],
         [sg.Combo(['公式一', '公式二', '公式三', '公式四', '公式五', '公式六'],
                   default_value='公式一', k='Combo_Formula', size=(8, 1), readonly=True, enable_events=True),
-         sg.Text('公式詳情'), sg.Text('[(A1+A2+A3+A4+A5)-A6] / (A7/10) - Price', k='Combo_Formula_Full', size=(65, 1))],
-        [sg.Button('計算', disabled=(not DB_READY)), sg.Button(
-            '查閱公式變數', disabled=(not DB_READY))],
+         sg.Text('公式詳情'), sg.Text('[ ( A1 + A2 + A3 + A4 + A5 ) - A6 ] / ( A7 / 10 ) - Price', k='Combo_Formula_Full', size=(65, 1))],
+        [sg.Button('計算', disabled=(not DB_READY),tooltip='將資料庫內的財務報告與股價資料讀入後以選擇的公式進行運算。'), sg.Button(
+            '查閱公式變數', disabled=(not DB_READY),tooltip='瞭解公式內的變數意義。')],
         [sg.Text('其他選項')],
-        [sg.Button('編輯本地股號表'), sg.Button('設定'), sg.Button(
-            '離開'), sg.Button('關於'), sg.Button('說明')]
+        [sg.Button('編輯本機股號表',tooltip='編輯、刪除股號表中的股號，獲釋匯入外部股號表至本機股號表。'), sg.Button('設定',tooltip='設定資料庫連線，編輯或刪除資料庫，主題等相關設定。'), sg.Button(
+            '離開'), sg.Button('關於',tooltip='DS'), sg.Button('說明',tooltip='獲取該頁面的說明')]
     ]
     return sg.Window("股票資料抓取與運算", main_Layout, margins=(40, 20), finalize=True)
 
 
-def set_Local_CSV_Window():  # 主視窗 -> 編輯本地股號表
+def set_Local_CSV_Window():  # 主視窗 -> 編輯本機股號表
     local_Coid_CSV_Layout = [
         [sg.Text('輸入股號或公司名稱過濾'), sg.Input(size=(25, 1),
                                           k='filter_data', enable_events=True), sg.Button('清除過濾')],
@@ -1215,13 +1217,13 @@ def set_Local_CSV_Window():  # 主視窗 -> 編輯本地股號表
                   display_row_numbers=False,
                   num_rows=25, select_mode="browse", enable_events=False,
                   key='_local_Coid_CSV_Table', right_click_menu=['右鍵', ['編輯', '刪除']], justification='center', bind_return_key=True)],
-        [sg.Button('新增單筆資料')],
-        [sg.Button('關閉且「不保存」變更'), sg.Button('關閉且「保存」變更')],
-        [sg.Button('保存當前變更'), sg.Button('重新整理')],
-        [sg.Button('匯入外部股號表'), sg.Button('重置本地股號表')],
-        [sg.Text(f'本地股號表CSV位於{csvpath}')]
+        [sg.Button('新增單筆資料',tooltip='輸入單筆股號與名稱。')],
+        [sg.Button('關閉且「不保存」變更',tooltip='不做任何變更後關閉視窗。'), sg.Button('關閉且「保存」變更',tooltip='保存並關閉。')],
+        [sg.Button('保存當前變更',tooltip='保存目前變更。'), sg.Button('重新整理',tooltip='從原始的資料庫中重新載入。')],
+        [sg.Button('匯入外部股號表',tooltip='匯入外部的股號表，可以加入或取代目前現有之本機股號表'), sg.Button('重置本機股號表',tooltip='清空本機股號表')],
+        [sg.Text(f'本機股號表CSV位於{csvpath}')]
     ]
-    return sg.Window("編輯本地股號表", local_Coid_CSV_Layout, grab_anywhere=False, finalize=True, modal=True, disable_close=False, disable_minimize=False,
+    return sg.Window("編輯本機股號表", local_Coid_CSV_Layout, grab_anywhere=False, finalize=True, modal=True, disable_close=False, disable_minimize=False,
                      force_toplevel=True, no_titlebar=False)
 
 
@@ -1266,6 +1268,8 @@ while True:  # 監控視窗回傳
     window, event, values = sg.read_all_windows()
     # sg.Print(f'Window:{window},event:{event},values:{values}')
     if window == main_Window:  # 主視窗
+        if event == '說明':
+            sg.popup_ok(main_Window_Help,'主視窗說明',no_titlebar=True)
         if event == 'Combo_Formula':
             if values['Combo_Formula'] == '公式一':
                 window['Combo_Formula_Full'].update(
@@ -1295,6 +1299,7 @@ while True:  # 監控視窗回傳
                 Spider_Stock_Price_Window = set_AutoMode_Window()
                 window.minimize()
         if event == "開始爬取財務報告":
+            print(len(user_Coid_CSV_List))
             if(check_Mongo()):
                 winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
                 sg.popup(
@@ -1317,11 +1322,15 @@ while True:  # 監控視窗回傳
             main_Window.minimize()
             if(MDB_Load.init_calc(str(values['Combo_Formula']))):
                 displayDB_Window = MDB_Load.set_display_DB_Data()
+            else:
+                main_Window.normal()
 
         if event == "設定":
+            window.minimize()
             setting_Window = set_Setting_Window()
 
-        if event == "編輯本地股號表":
+        if event == "編輯本機股號表":
+            window.minimize()
             local_Csv_Window = set_Local_CSV_Window()
             load_Local_CSV_Table_CSVDF()
 
@@ -1365,6 +1374,7 @@ while True:  # 監控視窗回傳
             sg.theme(conf.get('System','Theme'))
             window.close()
             setting_Window = None
+            main_Window.normal()
 
         if event == 'mDBName':
             print(values['mDBName'])
@@ -1433,8 +1443,10 @@ while True:  # 監控視窗回傳
                 reset_setting()
                 winsound.MessageBeep(winsound.MB_ICONASTERISK)
                 sg.popup('已重置！')
-                window.close()
-                setting_Window = None
+                theme = sg.theme(str(values['mTheme']))
+                main_Window.close()
+                main_Window = set_Main_Window()
+                setting_Window.close()
         if event == "開啟設定目錄":
             os.startfile(profile_PATH)
 
@@ -1443,6 +1455,7 @@ while True:  # 監控視窗回傳
         if event in (sg.WIN_CLOSED, '取消'):
             window.close()
             Spider_Stock_Price_Window = None
+            main_Window.normal()
         if event == '確定':
             if(values['_loadFromLocal']):
                 window.close()
@@ -1464,6 +1477,7 @@ while True:  # 監控視窗回傳
         if event in (sg.WIN_CLOSED, '取消'):
             window.close()
             aM_Window = None
+            main_Window.normal()
         if event == '確定':
             if(values['_loadFromLocal']):
                 window.close()
@@ -1481,7 +1495,7 @@ while True:  # 監控視窗回傳
                     window.close()
                     aM_Window = None
 
-    if window == csv_Row_Add_Window:  # 編輯本地股號表 -> 新增單筆資料
+    if window == csv_Row_Add_Window:  # 編輯本機股號表 -> 新增單筆資料
         if event == '保存':
             co_id = values['COID']
             co_name = values['CONAME']
@@ -1504,7 +1518,7 @@ while True:  # 監控視窗回傳
             csv_Row_Add_Window = None
             local_Csv_Window.make_modal()
 
-    if window == local_Csv_Window:  # 主視窗 -> 編輯本地股號表
+    if window == local_Csv_Window:  # 主視窗 -> 編輯本機股號表
         window['_local_Coid_CSV_Table'].bind("bind_return_key", "編輯")
         if event == 'backup_btn':
             local_CSV_Restore_USER_DF()
@@ -1533,12 +1547,16 @@ while True:  # 監控視窗回傳
             update_Local_CSV_Table()
             window.close()
             local_Csv_Window = None
+            main_Window.close()
+            main_Window=set_Main_Window()
         if event == '關閉且「保存」變更':
             print(user_df)
             save_Local_CSV()
             backup_Coid_pd_df.clear()
             window.close()
             local_Csv_Window = None
+            main_Window.close()
+            main_Window=set_Main_Window()
         if event == "重新整理":
             if(local_Coid_CSV_is_changed):
                 winsound.MessageBeep(winsound.MB_ICONQUESTION)
@@ -1549,7 +1567,7 @@ while True:  # 監控視窗回傳
             window.make_modal()
         if event == "匯入外部股號表":
             local_CSV_Import_usercsvfile()
-        if event == "重置本地股號表":
+        if event == "重置本機股號表":
             winsound.MessageBeep(winsound.MB_ICONQUESTION)
             if(sg.popup_yes_no('是否重置股號表？', title='確認重置', modal=True) == 'Yes'):
                 local_CSV_Backup_USER_DF()
@@ -1625,4 +1643,5 @@ while True:  # 監控視窗回傳
         if event == '返回':
             window.close()
             Spider_Stock_Select_Mode_Window = None
+            main_Window.normal()
 window.close()
