@@ -139,9 +139,9 @@ class StockSpider(scrapy.Spider):
         for datas in response.xpath('body/div[2]/div[3]'):
             for tableID in range(0, len(tables_ID)):  # 表一獲取資料
                 if(isTable1):
-                    tables1_ID_Type2 = ['11000', '1110', '1120','1136', '1139', '25XX', '31101']
-                    tables1_ID_Type3 = ['111100', '112000', '1120','1136', '1139', '220000', '31100']
-                    tables1_ID_Type4 = ['111100', '112000', '1120','1136', '1139', '220000', '301010']
+                    tables1_ID_Type2 = ['11000', '1110', '1120','1136', '1139','1140', '25XX', '31101']
+                    tables1_ID_Type3 = ['111100', '112000', '1120','1136', '1139','1140', '220000', '31100']
+                    tables1_ID_Type4 = ['111100', '112000', '1120','1136', '1139','1140', '220000', '301010']
                     data = datas.xpath(
                     f"//td[text() = '{tables_ID[tableID]}']/following-sibling::td[2]//text()").getall() #td[2]使用代號，td[1]使用名稱定位
                     data2 = datas.xpath(
@@ -267,10 +267,10 @@ class StockSpider(scrapy.Spider):
             items['SYear'] = self.Year
             items['SSeason'] = self.Season
             # 主要爬蟲區
-            tables1_ID = ['1100', '1110', '1120','1136', '1139', '25XX', '3110']
+            tables1_ID = ['1100', '1110', '1120','1136', '1139','1140', '25XX', '3110']
             #tables1_ID = ['現金及約當現金', '透過損益按公允價值衡量之金融資產－流動', '透過其他綜合損益按公允價值衡量之金融資產－流動',
             #              '按攤銷後成本衡量之金融資產－流動', '避險之金融資產－流動', '非流動負債合計', '普通股股本']
-            tables1_ItemsName = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7']
+            tables1_ItemsName = ['A1', 'A2', 'A3', 'A4', 'A5','A5_5', 'A6', 'A7']
             #tables2_ID = ['營業收入合計', '營業利益（損失）', '營業外收入及支出合計', '稀釋每股盈餘合計']
             tables2_ID = ['4000', '6900', '7000', '9850']
             tables2_ItemsName = ['B1', 'B2', 'B3', 'B4']

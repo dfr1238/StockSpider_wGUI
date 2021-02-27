@@ -20,6 +20,7 @@ class StockSpider_items(scrapy.Item):
     A3 = scrapy.Field() #A3:透過其他綜合損益按公允價值衡量之金融資產－流動
     A4 = scrapy.Field() #A4:按攤銷後成本衡量之金融資產－流動
     A5 = scrapy.Field() #A5:避險之金融資產－流動
+    A5_5 = scrapy.Field() #A5_5:合約資產 - 流動
     A6 = scrapy.Field() #A6:非流動負債合計
     A7 = scrapy.Field() #A7:普通股股本
     ##B

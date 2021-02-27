@@ -22,9 +22,9 @@ sg.set_options(auto_size_buttons=True)
 
 print('！！！此為運行時的控制台，關閉將會立刻關閉程式！！！')
 
-formula_Info = ('A1=現金及約當現金\nA2=透過損益按公允價值衡量之金融資產－流動\nA3=透過其他綜合損益按公允價值衡量之金融資產－流動\nA4=按攤銷後成本衡量之金融資產－流動\nA5=避險之金融資產－流動\nA6=非流動負債合計\nA7=普通股股本\nB1=營業收入合計\nB2=營業利益（損失）\nB3=營業外收入及支出合計\nB4=稀釋每股盈餘合計(EPS)\nPrice=收盤價')
+formula_Info = ('A1=現金及約當現金\nA2=透過損益按公允價值衡量之金融資產－流動\nA3=透過其他綜合損益按公允價值衡量之金融資產－流動\nA4=按攤銷後成本衡量之金融資產－流動\nA5=避險之金融資產－流動\nA5_5=合約資產 - 流動\nA6=非流動負債合計\nA7=普通股股本\nB1=營業收入合計\nB2=營業利益（損失）\nB3=營業外收入及支出合計\nB4=稀釋每股盈餘合計(EPS)\nPrice=收盤價')
 
-main_Window_Help='歡迎使用股票資訊與計算程式，如果你是第一次使用的話，請先到「編輯本機股號表」裡面匯入你的股號表（格式為CSV），之後即可開始使用其他功能\n如果有要做計算功能，請先用網路爬蟲功能抓取必要的財務報告與股價！且注意需要的抓取數目！\n財務報告：如果目前屬於第四季，那麼你只要抓取該年的1-4季的資料即可，但若不是的話得額外抓取去年的1-4季資料才行！\n股價資料：收盤之後啟動爬蟲抓取，將會幫你抓取今日的收盤價資訊。\n「編輯本機股號表」內可以匯入你已有的一系列股號的CSV檔，請記得匯入時請包含代號與名稱欄位\n你可以在「設定」中存取或刪除指定的資料庫，或者更改配色主題'
+main_Window_Help='歡迎使用股票資訊與計算程式，如果你是第一次使用的話，請先到「編輯本機股號表」裡面匯入你的股號表（格式為CSV），之後即可開始使用其他功能\n如果有要計算，請先用網路爬蟲功能抓取必要的財務報告與股價！且注意需要的抓取數目！股價獲取以當天的收盤價為主。\n財務報告：請抓取本季度資料，並加上去年的全年度資料。\n股價資料：收盤之後啟動爬蟲抓取，將會幫你抓取今日的收盤價資訊。\n「編輯本機股號表」內可以匯入你已有的一系列股號的CSV檔，請記得匯入時請包含代號與名稱欄位\n你可以在「設定」中存取或刪除指定的資料庫，或者更改配色主題'
 
 
 theme =''
@@ -721,12 +721,13 @@ class MongoDB_Load():
                 A3=calc_VarData.iloc[0]["A3"]
                 A4=calc_VarData.iloc[0]["A4"]
                 A5=calc_VarData.iloc[0]["A5"]
+                A5_5=calc_VarData.iloc[0]["A5_5"]
                 A6=calc_VarData.iloc[0]["A6"]
                 A7=calc_VarData.iloc[0]["A7"]
                 if(A7 == 0.00):
                     continue
                 Price=calc_VarData.iloc[0]["股價"]
-                ans_block=round((((A1+A2+A3+A4+A5)-A6)/(A7/10.00)-Price),2)
+                ans_block=round((((A1+A2+A3+A4+A5+A5_5)-A6)/(A7/10.00)-Price),2)
                 pass
             
             if(ForumlaType=='公式二'):
@@ -844,6 +845,7 @@ class MongoDB_Load():
             A3=getStockData_StartTime.iloc[0]["A3"]
             A4=getStockData_StartTime.iloc[0]["A4"]
             A5=getStockData_StartTime.iloc[0]["A5"]
+            A5_5=getStockData_StartTime.iloc[0]["A5_5"]
             A6=getStockData_StartTime.iloc[0]["A6"]
             A7=getStockData_StartTime.iloc[0]["A7"]
             B1=getStockData_StartTime.iloc[0]["B1"]
@@ -934,9 +936,9 @@ class MongoDB_Load():
                 #print('Out Season')
             if(not(is_run_season_exist)):
                  continue
-            dict={'股號':str(coid),'名稱':name,'年份':str(self.db_Data_Newest_Year),'季度':str(self.db_Data_Newest_Season),'A1':A1,'A2':A2,'A3':A3,'A4':A4,'A5':A5,'A6':A6,'A7':A7,'B1':B1,'B2':B2,'B3':B3,'B4':B4,'去年同期B2':last_year_B2,'去年同期B4':last_year_B4,'去年同期B3':last_year_B3,'股價':Price,'近四季 EPS':recent_EPS}
+            dict={'股號':str(coid),'名稱':name,'年份':str(self.db_Data_Newest_Year),'季度':str(self.db_Data_Newest_Season),'A1':A1,'A2':A2,'A3':A3,'A4':A4,'A5':A5,'A5_5':A5_5,'A6':A6,'A7':A7,'B1':B1,'B2':B2,'B3':B3,'B4':B4,'去年同期B2':last_year_B2,'去年同期B4':last_year_B4,'去年同期B3':last_year_B3,'股價':Price,'近四季 EPS':recent_EPS}
             self.calcDataDF = self.calcDataDF.append(dict, ignore_index=True,sort=False)
-            cols=['股號','名稱','年份','季度','A1','A2','A3','A4','A5','A6','A7','B1','B2','B3','B4','去年同期B2','去年同期B3','去年同期B4','股價','近四季 EPS']
+            cols=['股號','名稱','年份','季度','A1','A2','A3','A4','A5','A5_5','A6','A7','B1','B2','B3','B4','去年同期B2','去年同期B3','去年同期B4','股價','近四季 EPS']
             self.calcDataDF = self.calcDataDF[cols]
             print(f'當年當季資料：{getStockData_StartTime}\n去年同期資料：{getStockData_LastYear}\n今日股價：{Price}\n近四季EPS：{recent_EPS}')
         #print(self.calcDataDF)
@@ -1052,7 +1054,7 @@ class MongoDB_Load():
         query = {"DATA_TYPE": "財務報告"} #過濾搜尋query
         self.load_from_DB(query_slot,query)
         try:
-            self.tableDF=self.tableDF[['CO_ID','SYear','SSeason','CO_FULL_NAME','A1','A2','A3','A4','A5','A6','A7','B1','B2','B3','B4']]
+            self.tableDF=self.tableDF[['CO_ID','SYear','SSeason','CO_FULL_NAME','A1','A2','A3','A4','A5','A5_5','A6','A7','B1','B2','B3','B4']]
         except KeyError:
             sg.popup('找不到財務報告資料')
             return False
@@ -1205,7 +1207,7 @@ def set_Main_Window():  # 主視窗
         [sg.Text('[運行計算式]')],
         [sg.Combo(['公式一', '公式二', '公式三', '公式四', '公式五', '公式六'],
                   default_value='公式一', k='Combo_Formula', size=(8, 1), readonly=True, enable_events=True),
-         sg.Text('公式詳情'), sg.Text('[ ( A1 + A2 + A3 + A4 + A5 ) - A6 ] / ( A7 / 10 ) - Price', k='Combo_Formula_Full', size=(65, 1))],
+         sg.Text('公式詳情'), sg.Text('[ ( A1 + A2 + A3 + A4 + A5 + A5_5 ) - A6 ] / ( A7 / 10 ) - Price', k='Combo_Formula_Full', size=(65, 1))],
         [sg.Button('計算', disabled=(not DB_READY),tooltip='將資料庫內的財務報告與股價資料讀入後以選擇的公式進行運算。'), sg.Button(
             '查閱公式變數', disabled=(not DB_READY),tooltip='瞭解公式內的變數意義。')],
         [sg.Text('其他選項')],
@@ -1284,7 +1286,7 @@ while True:  # 監控視窗回傳
         if event == 'Combo_Formula':
             if values['Combo_Formula'] == '公式一':
                 window['Combo_Formula_Full'].update(
-                    value="[ ( A1 + A2 + A3 + A4 + A5 ) - A6 ] / ( A7 / 10 ) - Price")
+                    value="[ ( A1 + A2 + A3 + A4 + A5 + A5_5 ) - A6 ] / ( A7 / 10 ) - Price")
             if values['Combo_Formula'] == '公式二':
                 window['Combo_Formula_Full'].update(
                     value="｛( B4 - 去年同期的 B4 ) / ( 去年同期的 B4 ) ｝x 100 - Price / 近四季 EPS")
