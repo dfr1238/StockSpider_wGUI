@@ -721,6 +721,7 @@ class MongoDB_Load():
             name=calc_VarData.iloc[0]["名稱"]
             recent_EPS=calc_VarData.iloc[0]["近四季 EPS"]
             if(ForumlaType=='公式一'):
+                self.tableType=f'{ForumlaType}\n每股現金淨值-股價'
                 self.calc_ans_row_color=[]
                 return_FType=True
                 A1=calc_VarData.iloc[0]["A1"]
@@ -738,6 +739,7 @@ class MongoDB_Load():
                 pass
             
             if(ForumlaType=='公式二'):
+                self.tableType=f'{ForumlaType}\nEPS成長>本益比'
                 return_FType=True
                 B4=calc_VarData.iloc[0]["B4"]
                 LastYear_B4=calc_VarData.iloc[0]["去年同期B4"]
@@ -752,6 +754,7 @@ class MongoDB_Load():
                 pass
 
             if(ForumlaType== '公式三'):
+                self.tableType=f'{ForumlaType}\n營利成長>本益比'
                 #self.calc_ans_row_color=[]
                 return_FType=True
                 B2=calc_VarData.iloc[0]["B2"]
@@ -765,6 +768,7 @@ class MongoDB_Load():
                     self.calc_ans_row_color.append(coid)
                 pass
             if(ForumlaType == '公式四'):
+                self.tableType=f'{ForumlaType}\n營業利益成長 & 業外虧損'
                 self.calc_ans_row_color=[]
                 return_FType=True
                 calc_block_1=0.00
@@ -780,6 +784,7 @@ class MongoDB_Load():
                 else:
                     continue
             if(ForumlaType == '公式五'):
+                self.tableType=f'{ForumlaType}\n營業利益成長'
                 self.calc_ans_row_color=[]
                 calc_block_1=0.00
                 calc_block_1=calc_VarData.iloc[0]["B2"]
@@ -791,6 +796,7 @@ class MongoDB_Load():
                     continue
                 pass
             if(ForumlaType == '公式六'):
+                self.tableType=f'{ForumlaType}\n業外虧損'
                 self.calc_ans_row_color=[]
                 calc_block_1=0.00
                 calc_block_1=calc_VarData.iloc[0]["B3"]
@@ -981,7 +987,6 @@ class MongoDB_Load():
             if(not(self.is_calcDataDF_Ready,True)):
                 self.calcDataDF=DataFrame()
             self.calcAnsDF=DataFrame()
-            self.tableType = FormulaType
             self.Date = datetime.today().strftime("%Y-%m-%d")
             #self.Date = "2021-02-23"
             coid_list=self.StockDataDF["股號"].drop_duplicates().tolist()
