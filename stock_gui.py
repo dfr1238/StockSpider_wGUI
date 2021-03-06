@@ -841,6 +841,7 @@ class MongoDB_Load():
         end_year=start_year
         end_year-=1
         current_process=0
+        most_recent_date = str(self.StockPriceDF["收盤日"].max())
         coid_list_max=len(coid_list)
         for coid in coid_list: #目前股號
             #print(coid)
@@ -858,7 +859,7 @@ class MongoDB_Load():
             run_season=start_season
             getStockData_StartTime=self.StockDataDF[(self.StockDataDF["代號"]==coid) & (self.StockDataDF["年份"] == str(start_year)) & (self.StockDataDF["季度"] == str(start_season))]
             getStockData_LastYear=self.StockDataDF[(self.StockDataDF["代號"]==coid) & (self.StockDataDF["年份"] == str(start_year-1)) & (self.StockDataDF["季度"] == str(start_season))]
-            getStockPriceData=self.StockPriceDF[ ( self.StockPriceDF["代號"]==coid ) & ( self.StockPriceDF["收盤日"] == self.Date )]
+            getStockPriceData=self.StockPriceDF[ ( self.StockPriceDF["代號"]==coid ) & ( self.StockPriceDF["收盤日"] == most_recent_date )]
             recent_EPS=0.0
             getStockData_StartTime = getStockData_StartTime.reset_index(drop=True)
             getStockData_LastYear = getStockData_LastYear.reset_index(drop=True)
@@ -1086,6 +1087,7 @@ class MongoDB_Load():
         self.tableDF=self.tableDF.dropna()
         self.StockPriceDF=self.tableDF
         print(self.StockPriceDF)
+        print(self.StockPriceDF["收盤日"].max())
         return True
 
     def load_MixData(self,isCalc):
