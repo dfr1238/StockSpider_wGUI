@@ -639,6 +639,7 @@ def local_CSV_Import_usercsvfile():  # 選擇外部股號表檔案
 
 
 class MongoDB_Load():
+    priceDate=''
     is_calcDataDF_Ready=False
     global DBClient, DB_LIST, CODATA_LIST, year_List, season_List
     default_dict={'測試欄位':['測試資料'],'測試欄位2':['測試資料'],'測試欄位3':['測試資料']}
@@ -842,6 +843,7 @@ class MongoDB_Load():
         end_year-=1
         current_process=0
         most_recent_date = str(self.StockPriceDF["收盤日"].max())
+        self.priceDate = most_recent_date
         coid_list_max=len(coid_list)
         for coid in coid_list: #目前股號
             #print(coid)
@@ -873,7 +875,7 @@ class MongoDB_Load():
             try:
                 name=getStockPriceData.iloc[0]["公司縮寫"]
             except IndexError:
-                sg.Print(f'抓不到 {coid} 在 {self.Date}的股價資料！')
+                sg.Print(f'抓不到 {coid} 在 {most_recent_date}的股價資料！')
                 continue
             try:
                 A1=getStockData_StartTime.iloc[0]["A1"]
@@ -906,9 +908,17 @@ class MongoDB_Load():
                 last_year_B4=getStockData_LastYear.iloc[0]["B4"]
                 #print('年',run_year,'季度',run_season)
                 for season in range(3,0,-1): #今年
+                    B4_data_ok=True
                     temp_StockData=self.StockDataDF[(self.StockDataDF["代號"]==coid) & (self.StockDataDF["年份"] == str(start_year)) & (self.StockDataDF["季度"] == str(season))]
                     temp_StockData = temp_StockData.reset_index(drop=True)
-                    temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
+                    try:
+                        temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
+                    except IndexError:
+                        sg.Print(f'抓不到 {coid} 在 {start_year} 年第 {season} 的B4資料！')
+                        B4_data_ok=False
+                        continue
+                if(not B4_data_ok):
+                    continue
                 #print(temp_S1_S3_SUM)
                 temp_S1_S3_SUM = round(temp_S1_S3_SUM,2)
                 B4-=temp_S1_S3_SUM
@@ -917,9 +927,17 @@ class MongoDB_Load():
                 #print(f'今年B4 {B4}')
                 #print('年',run_year,'季度',run_season)
                 for season in range(3,0,-1): #去年
+                    B4_data_ok=True
                     temp_StockData=self.StockDataDF[(self.StockDataDF["代號"]==coid) & (self.StockDataDF["年份"] == str(start_year-1)) & (self.StockDataDF["季度"] == str(season))]
                     temp_StockData = temp_StockData.reset_index(drop=True)
-                    temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
+                    try:
+                        temp_S1_S3_SUM+=temp_StockData.iloc[0]["B4"]
+                    except IndexError:
+                        sg.Print(f'抓不到 {coid} 在 {start_year-1} 年第 {season} 的B4資料！')
+                        B4_data_ok=False
+                        continue
+                if(not B4_data_ok):
+                    continue
                 temp_S1_S3_SUM = round(temp_S1_S3_SUM,2)
                 last_year_B4-=temp_S1_S3_SUM
                 last_year_B4=round(last_year_B4,2)
@@ -1008,7 +1026,7 @@ class MongoDB_Load():
                 try:
                     coid_list=self.calcDataDF["代號"].drop_duplicates().tolist()
                 except KeyError:
-                    sg.popup_error('載入股價資料時發生錯誤，請確定是否抓取了今日股價資料！')
+                    sg.popup_error('載入股價資料時發生錯誤，請確定是否抓取了股價資料！')
                     return False
                 if(self.calc_Forumla(coid_list,FormulaType)):
                     print('True')
@@ -1142,6 +1160,7 @@ class MongoDB_Load():
     def set_display_DB_Data(self):
         displayDB_Layout = [
             [sg.Text('目前顯示'), sg.Text(self.tableType, k='display_Type')],
+            [sg.Text('資料庫最新股價日期：'),sg.Text(self.priceDate)],
             [sg.Table(values=self.table_List, auto_size_columns=False, def_col_width=10,justification="left",
                       headings=self.table_Heading, num_rows=min(30,len(self.table_List)), select_mode="extended",
                       enable_events=True, key='display_Table', bind_return_key=True, vertical_scroll_only=False,row_colors=None)],
@@ -1404,7 +1423,7 @@ while True:  # 監控視窗回傳
         if event == "查閱公式變數":
             sg.popup(formula_Info,'公式變數參考，你可以變更公式時移動視窗來參考。',no_titlebar=True,grab_anywhere=True,non_blocking=True)
         if event == "關於":
-            sg.popup('股票資訊爬蟲\n版本： 1.1\n作者：Douggy Sans\n2021年編寫', title='關於')
+            sg.popup('股票資訊爬蟲\n版本： 1.11\n作者：Douggy Sans\n2021年編寫', title='關於')
 
     if window == displayDB_Window:
 

@@ -211,7 +211,7 @@ class stockPriceSpider(scrapy.Spider):
                     items['Price'] = tpex_price
                     items['SUB_DATA_TYPE'] = 'TPEX'
                     items['SYear'] = str(self.Year)
-                    items['SDate'] = datetime(self.Date)
+                    items['SDate'] = str(self.Date)
                     items['DATA_TYPE'] = self.Type
                     yield(items)
         self.TPEX_First_Run = False

@@ -277,7 +277,7 @@ class StockSpider(scrapy.Spider):
             tables2_ItemsName = ['B1', 'B2', 'B3', 'B4']
             self.get_From_Table(items, response, tables1_ID, tables1_ItemsName,True)
             self.get_From_Table(items, response, tables2_ID, tables2_ItemsName,False)
-            if(co_name!=None):
+            if(co_name!='None' and co_name!= None and co_name!=''):
                 yield(items)
             else:
                 self.cant_reach.append(company_Id)
