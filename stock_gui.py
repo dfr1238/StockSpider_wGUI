@@ -1436,7 +1436,7 @@ while True:  # 監控視窗回傳
         if event == "查閱公式變數":
             sg.popup(formula_Info,'公式變數參考，你可以變更公式時移動視窗來參考。',no_titlebar=True,grab_anywhere=True,non_blocking=True)
         if event == "關於":
-            sg.popup('股票資訊爬蟲\n版本： 1.15\n作者：Douggy Sans\n2021年編寫', title='關於')
+            sg.popup('股票資訊爬蟲\n版本： 1.16\n作者：Douggy Sans\n2021年編寫', title='關於')
 
     if window == displayDB_Window:
 
