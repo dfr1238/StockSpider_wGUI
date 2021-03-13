@@ -640,7 +640,10 @@ def local_CSV_Import_usercsvfile():  # 選擇外部股號表檔案
 
 class MongoDB_Load():
     priceDate=''
+    current_DataDF_count=''
     is_calcDataDF_Ready=False
+    is_StockDataDF_Ready=False
+    is_Price_DataDF_Ready=False
     global DBClient, DB_LIST, CODATA_LIST, year_List, season_List
     default_dict={'測試欄位':['測試資料'],'測試欄位2':['測試資料'],'測試欄位3':['測試資料']}
     tableDF=DataFrame(data=default_dict)
@@ -830,9 +833,11 @@ class MongoDB_Load():
         print(color_list)
         displayDB_Window['display_Table'].update(row_colors=tuple(color_list))
         pass
-    def get_calc_Formula_var(self,coid_list):
-        if(self.is_calcDataDF_Ready):
+    def get_calc_Formula_var(self,coid_list,current_DataDF_count):
+        if(current_DataDF_count == self.current_DataDF_count):
             return True
+        else:
+            self.calcDataDF=DataFrame()
         #print(coid_list)
         start_year=int(self.db_Data_Newest_Year)
         start_season=int(self.db_Data_Newest_Season)
@@ -1007,10 +1012,12 @@ class MongoDB_Load():
             #print(f'當年當季資料：{getStockData_StartTime}\n去年同期資料：{getStockData_LastYear}\n今日股價：{Price}\n近四季EPS：{recent_EPS}')
         print(self.calcDataDF)
         #print(self.calcDataDF.dtypes)
+        self.current_DataDF_count = current_DataDF_count
         self.is_calcDataDF_Ready=True
         return True
 
     def init_calc(self,FormulaType):
+        global local_csvdf
         coid_list=[]
         if(self.load_MixData(True)):
             if(not(self.is_calcDataDF_Ready,True)):
@@ -1018,11 +1025,17 @@ class MongoDB_Load():
             self.calcAnsDF=DataFrame()
             self.Date = datetime.today().strftime("%Y-%m-%d")
             #self.Date = "2021-02-23"
-            coid_list=self.StockDataDF["代號"].drop_duplicates().tolist()
+            is_Local_Only = sg.popup_yes_no('是否只讀取與運算本地股號表內之股號？')
+            if(is_Local_Only=='Yes'):
+                coid_list=local_csvdf["代號"].drop_duplicates().tolist()
+                current_DataDF_count = len(coid_list)
+            else:
+                coid_list=self.StockDataDF["代號"].drop_duplicates().tolist()
+                current_DataDF_count = len(coid_list)
             self.db_Data_Newest_Year = self.StockDataDF["年份"].max()
             self.db_Data_Newest_Season = self.StockDataDF.loc[self.StockDataDF["年份"]==self.db_Data_Newest_Year,"季度"].max()
             print(f'年份：{self.db_Data_Newest_Year} 季度：{self.db_Data_Newest_Season}')
-            if(self.get_calc_Formula_var(coid_list)):
+            if(self.get_calc_Formula_var(coid_list,current_DataDF_count)):
                 try:
                     coid_list=self.calcDataDF["代號"].drop_duplicates().tolist()
                 except KeyError:
