@@ -1376,7 +1376,7 @@ while True:  # 監控視窗回傳
                     value="｛( B2 - 去年同期 B2 ) / 去年同期 B2｝x 100 - Price / 近四季 EPS")
             if values['Combo_Formula'] == '公式四':
                 window['Combo_Formula_Full'].update(
-                    value="( B2 - 去年同期 B2 ) > 1 or ( B3- 去年同期 B3 ) < 1")
+                    value="( B2 - 去年同期 B2 ) > 1 & ( B3- 去年同期 B3 ) < 1")
             if values['Combo_Formula'] == '公式五':
                 window['Combo_Formula_Full'].update(
                     value="( B2 - 去年同期 B2 ) > 1")
